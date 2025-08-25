@@ -1,13 +1,60 @@
+# Firebase (!보안 필수!)
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+
 # Miscellaneous
 *.class
 *.lock
 *.log
 *.pyc
 *.swp
+.DS_Store
+.atom/
 .buildlog/
 .history
+.svn/
 
+# Flutter/Dart
+/build/
+/.dart_tool/
+/.packages
+/.pub-cache/
+/doc/api/
+.flutter-plugins
+.flutter-plugins-dependencies
 
+# VS Code
+.vscode/
+
+# IntelliJ/Android Studio
+.idea/
+*.iml
+
+# Xcode
+/ios/Pods/
+/ios/Flutter/App.framework
+/ios/Flutter/engine.framework
+/ios/.symlinks/
+/ios/Flutter/Generated.xcconfig
+/ios/Runner/Assets.xcassets/AppIcon.appiconset/
+/ios/Runner/GeneratedPluginRegistrant.*
+*.hmap
+*.xccheckout
+
+# Android
+/android/key.properties
+/android/.gradle
+/android/local.properties
+/android/app/src/main/assets/flutter_assets/*
+.gradle/
+captures/
+*.jks
+*.keystore
+
+# Generated files
+lib/generated_plugin_registrant.dart
+lib/**.g.dart
+lib/**.freezed.dart
 
 # Flutter repo-specific
 /bin/cache/
