@@ -2,6 +2,9 @@
 /android/app/google-services.json
 /ios/Runner/GoogleService-Info.plist
 
+# Firebase options
+/lib/firebase_options.dart
+
 # Miscellaneous
 *.class
 *.lock
