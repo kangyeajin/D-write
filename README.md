@@ -1,8 +1,12 @@
 # d_write
 
-A new Flutter project.
-
 ## Getting Started
+
+1. 패키지 다운로드
+- flutter pub get 
+
+2. lib/main.dart 실행
+
 
 This project is a starting point for a Flutter application.
 

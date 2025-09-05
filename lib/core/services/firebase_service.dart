@@ -2,16 +2,30 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:d_write/core/models/user_model.dart';
 
-class FirebaseService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+abstract class IFirebaseService {
+  User? getCurrentUser();
+  Future<UserCredential?> signInWithEmail(String email, String password);
+  Future<UserProfile?> getUserProfile(String uid);
+  Future<void> saveUserProfile(String uid, String name, String info);
+  Future<void> signOut();
+  Future<User?> signUp(String email, String password, String name, String info);
+  Future<User?> signIn(String email, String password);
+}
 
-  // 현재 로그인 된 사용자 가져오기
+class FirebaseService implements IFirebaseService {
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
+
+  FirebaseService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
+
+  @override
   User? getCurrentUser() {
     return _auth.currentUser;
   }
 
-  // 이메일/비밀번호로 로그인
+  @override
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(email: email, password: password);
@@ -21,7 +35,7 @@ class FirebaseService {
     }
   }
 
-  // 사용자 정보 가져오기
+  @override
   Future<UserProfile?> getUserProfile(String uid) async {
     try {
       DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
@@ -34,7 +48,7 @@ class FirebaseService {
     return null;
   }
 
-  // 사용자 정보 저장/업데이트
+  @override
   Future<void> saveUserProfile(String uid, String name, String info) async {
     try {
       await _firestore.collection('users').doc(uid).set({
@@ -46,15 +60,14 @@ class FirebaseService {
     }
   }
 
-  // 로그아웃
+  @override
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  // firebase 회원가입 처리
+  @override
   Future<User?> signUp(String email, String password, String name, String info) async {
     try {
-      // 1. FirebaseAuth로 이메일과 비밀번호를 사용하여 사용자 생성
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -63,8 +76,6 @@ class FirebaseService {
       User? user = userCredential.user;
 
       if (user != null) {
-        // 2. 성공 시 Firestore 'users' 컬렉션에 추가 정보 저장
-        //    사용자의 고유 ID(uid)를 문서 ID로 사용
         await _firestore.collection('users').doc(user.uid).set({
           'name': name,
           'info': info,
@@ -72,7 +83,6 @@ class FirebaseService {
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      // Firebase 인증 관련 에러 처리
       if (e.code == 'weak-password') {
         print('비밀번호가 너무 약합니다.');
       } else if (e.code == 'email-already-in-use') {
@@ -87,7 +97,7 @@ class FirebaseService {
     }
   }
 
-  /// 로그인 처리
+  @override
   Future<User?> signIn(String email, String password) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(

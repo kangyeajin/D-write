@@ -1,48 +1,48 @@
+import 'package:d_write/core/services/firebase_service.dart';
 import 'package:flutter/material.dart';
-import '../../core/services/firebase_service.dart'; // 방금 만든 서비스 파일 import
-import './login_screen.dart'; // 로그인 화면 import 추가
+
+import 'login_screen.dart'; // 로그인 화면 import 추가
 
 class FirebaseTestScreen extends StatefulWidget {
-  const FirebaseTestScreen({super.key});
+  // 생성자를 통해 외부에서 FirebaseService를 주입받습니다.
+  final IFirebaseService firebaseService;
+
+  const FirebaseTestScreen({super.key, required this.firebaseService});
 
   @override
   State<FirebaseTestScreen> createState() => _FirebaseTestScreenState();
 }
 
 class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _infoController = TextEditingController();
 
-  // 회원가입 버튼을 눌렀을 때 실행될 함수
-  // 회원가입 성공 -> 로그인 화면으로 이동
-  // MaterialPageRoute(builder: (context) => const LoginScreen()) 사용
   void _handleSignUp() async {
-    final user = await _firebaseService.signUp(
+    final user = await widget.firebaseService.signUp(
       _emailController.text,
       _passwordController.text,
       _nameController.text,
       _infoController.text,
     );
 
-    if (mounted) { // 위젯이 여전히 화면에 있는지 확인
+    if (mounted) {
       if (user != null) {
-        // 회원가입 성공 시
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('회원가입 성공! 로그인 페이지로 이동합니다.')),
+          const SnackBar(content: Text('회원가입 성공! 로그인 페이지로 이동합니다.')),
         );
 
-        // 1초 후 로그인 화면으로 이동
         Future.delayed(const Duration(seconds: 1), () {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const LoginScreen()), // LoginScreen()으로 이동
+            MaterialPageRoute(
+              // 주입받은 firebaseService를 LoginScreen에 다시 전달합니다.
+              builder: (context) =>
+                  LoginScreen(firebaseService: widget.firebaseService),
+            ),
           );
         });
-
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('회원가입에 실패했습니다.')),
@@ -51,32 +51,16 @@ class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
     }
   }
 
-  // 로그인 버튼을 눌렀을 때 실행될 함수
   void _handleSignIn() async {
-    // 1초 후 로그인 화면으로 이동
     Future.delayed(const Duration(seconds: 1), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (context) =>
+              LoginScreen(firebaseService: widget.firebaseService),
+        ),
       );
     });
-
-    // final user = await _firebaseService.signIn(
-    //   _emailController.text,
-    //   _passwordController.text,
-    // );
-
-    // if (mounted) {
-    //   if (user != null) {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       SnackBar(content: Text('로그인 성공! 환영합니다, ${user.email}')),
-    //     );
-    //   } else {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       const SnackBar(content: Text('로그인에 실패했습니다.')),
-    //     );
-    //   }
-    // }
   }
 
   @override

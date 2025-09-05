@@ -1,19 +1,21 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:d_write/core/models/user_model.dart';
 import 'package:d_write/core/services/firebase_service.dart';
 import 'package:d_write/ui/views/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
-  const HomeScreen({super.key, required this.user});
+  final IFirebaseService firebaseService;
+
+  const HomeScreen(
+      {super.key, required this.user, required this.firebaseService});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
   final _nameController = TextEditingController();
   final _infoController = TextEditingController();
 
@@ -26,7 +28,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    final profile = await _firebaseService.getUserProfile(widget.user.uid);
+    final profile =
+        await widget.firebaseService.getUserProfile(widget.user.uid);
     if (profile != null) {
       setState(() {
         _userProfile = profile;
@@ -37,21 +40,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _saveProfile() async {
-    await _firebaseService.saveUserProfile(
+    await widget.firebaseService.saveUserProfile(
       widget.user.uid,
       _nameController.text,
       _infoController.text,
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('정보가 저장되었습니다.')),
+      const SnackBar(content: Text('정보가 저장되었습니다.')),
     );
   }
 
   Future<void> _signOut() async {
-    await _firebaseService.signOut();
+    await widget.firebaseService.signOut();
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(
+          builder: (context) =>
+              LoginScreen(firebaseService: widget.firebaseService)),
     );
   }
 
@@ -59,10 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('홈'),
+        title: const Text('홈'),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: _signOut,
           ),
         ],
@@ -73,22 +78,22 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('로그인 이메일: ${widget.user.email}'),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextField(
               controller: _nameController,
-              decoration: InputDecoration(labelText: '이름'),
+              decoration: const InputDecoration(labelText: '이름'),
             ),
             TextField(
               controller: _infoController,
-              decoration: InputDecoration(labelText: '소개'),
+              decoration: const InputDecoration(labelText: '소개'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveProfile,
-              child: Text('정보 저장'),
+              child: const Text('정보 저장'),
             ),
-            SizedBox(height: 20),
-            Text('저장된 정보', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            const Text('저장된 정보', style: TextStyle(fontWeight: FontWeight.bold)),
             if (_userProfile != null)
               Card(
                 child: ListTile(
@@ -97,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else
-              Text('저장된 정보가 없습니다.'),
+              const Text('저장된 정보가 없습니다.'),
           ],
         ),
       ),
