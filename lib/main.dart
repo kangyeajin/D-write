@@ -1,12 +1,10 @@
-import 'package:d_write/core/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-// import 'package:d_write/ui/views/login_screen.dart';
 import 'package:d_write/ui/views/main_screen.dart';
 import 'firebase_options.dart'; // flutterfire configure를 통해 생성됨
 
-void main() async {
-  // Flutter 앱이 실행되기 전에 Firebase를 초기화합니다.
+void main() async { 
+  // 앱 실행 전 Firebase 초기화 
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -15,7 +13,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key}); // super.key : 위젯 식별용, 동일한 위젯명 없으면 삭제해도 오류 X
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +23,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'PretendardBold', //폰트 전체 적용
         primarySwatch: Colors.blue,
       ),
-      home: MainScreen(),//LoginScreen(firebaseService: FirebaseService()), // 첫 화면을 로그인 화면으로 설정
+      home: const MainScreen(),
     );
   }
 }

@@ -6,7 +6,7 @@
 import 'dart:async' as _i4;
 
 import 'package:d_write/core/models/user_model.dart' as _i5;
-import 'package:d_write/core/services/firebase_service.dart' as _i3;
+import 'package:d_write/core/services/user_service.dart' as _i3;
 import 'package:firebase_auth/firebase_auth.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
@@ -57,10 +57,10 @@ class _FakeUser_5 extends _i1.SmartFake implements _i2.User {
     : super(parent, parentInvocation);
 }
 
-/// A class which mocks [IFirebaseService].
+/// A class which mocks [IUserService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockIFirebaseService extends _i1.Mock implements _i3.IFirebaseService {
+class MockIFirebaseService extends _i1.Mock implements _i3.IUserService {
   MockIFirebaseService() {
     _i1.throwOnMissingStub(this);
   }

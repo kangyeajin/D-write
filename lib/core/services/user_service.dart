@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:d_write/core/models/user_model.dart';
 
-abstract class IFirebaseService {
+abstract class IUserService {
   User? getCurrentUser();
   Future<UserCredential?> signInWithEmail(String email, String password);
   Future<UserProfile?> getUserProfile(String uid);
@@ -12,11 +12,11 @@ abstract class IFirebaseService {
   Future<User?> signIn(String email, String password);
 }
 
-class FirebaseService implements IFirebaseService {
+class UserService implements IUserService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
-  FirebaseService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+  UserService({FirebaseAuth? auth, FirebaseFirestore? firestore})
       : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance;
 

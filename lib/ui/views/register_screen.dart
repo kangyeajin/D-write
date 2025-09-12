@@ -1,26 +1,25 @@
-import 'package:d_write/core/services/firebase_service.dart';
+import 'package:d_write/core/services/user_service.dart';
+import 'package:d_write/ui/views/login_screen.dart';
 import 'package:flutter/material.dart';
 
-import 'login_screen.dart'; // 로그인 화면 import 추가
+class RegisterScreen extends StatefulWidget {
+  final IUserService userService;
 
-class FirebaseTestScreen extends StatefulWidget {
-  // 생성자를 통해 외부에서 FirebaseService를 주입받습니다.
-  final IFirebaseService firebaseService;
-
-  const FirebaseTestScreen({super.key, required this.firebaseService});
+  const RegisterScreen({super.key, required this.userService});
 
   @override
-  State<FirebaseTestScreen> createState() => _FirebaseTestScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _infoController = TextEditingController();
 
-  void _handleSignUp() async {
-    final user = await widget.firebaseService.signUp(
+  void _signUp() async {
+    // 회원가입 로직
+    final user = await widget.userService.signUp(
       _emailController.text,
       _passwordController.text,
       _nameController.text,
@@ -37,9 +36,9 @@ class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              // 주입받은 firebaseService를 LoginScreen에 다시 전달합니다.
+              // 주입받은 userService를 LoginScreen에 다시 전달합니다.
               builder: (context) =>
-                  LoginScreen(firebaseService: widget.firebaseService),
+                  LoginScreen(userService: widget.userService),
             ),
           );
         });
@@ -51,22 +50,20 @@ class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
     }
   }
 
-  void _handleSignIn() async {
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              LoginScreen(firebaseService: widget.firebaseService),
-        ),
-      );
-    });
+  void _goToLoginScreen() async {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            LoginScreen(userService: widget.userService),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Firebase 연동 테스트')),
+      appBar: AppBar(title: const Text('회원가입')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -95,14 +92,14 @@ class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _handleSignUp,
+              onPressed: _signUp,
               child: const Text('회원가입'),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: _handleSignIn,
+              onPressed: _goToLoginScreen,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('로그인'),
+              child: const Text('로그인 화면으로'),
             ),
           ],
         ),

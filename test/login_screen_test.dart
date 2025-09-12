@@ -1,5 +1,5 @@
 
-import 'package:d_write/core/services/firebase_service.dart';
+import 'package:d_write/core/services/user_service.dart';
 import 'package:d_write/ui/views/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
@@ -10,7 +10,7 @@ import 'package:mockito/mockito.dart';
 import 'login_screen_test.mocks.dart';
 
 // MockFirebaseService 클래스를 생성하도록 build_runner에게 지시합니다.
-@GenerateMocks([IFirebaseService, auth.User])
+@GenerateMocks([IUserService, auth.User])
 void main() {
   // 테스트에 사용할 가짜(Mock) 객체들을 선언합니다.
   late MockIFirebaseService mockFirebaseService;
@@ -37,7 +37,7 @@ void main() {
     // --- ACT (실행) ---
     // 3. LoginScreen 위젯을 빌드하고, mockFirebaseService를 주입합니다.
     await tester.pumpWidget(MaterialApp(
-      home: LoginScreen(firebaseService: mockFirebaseService),
+      home: LoginScreen(userService: mockFirebaseService),
     ));
 
     // 4. 초기 UI 상태를 검증합니다.
@@ -77,7 +77,7 @@ void main() {
 
     // --- ACT (실행) ---
     await tester.pumpWidget(MaterialApp(
-      home: LoginScreen(firebaseService: mockFirebaseService),
+      home: LoginScreen(userService: mockFirebaseService),
     ));
     await tester.enterText(find.byKey(const Key('email_field')), 'wrong@example.com');
     await tester.enterText(find.byKey(const Key('password_field')), 'wrong');

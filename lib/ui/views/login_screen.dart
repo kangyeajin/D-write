@@ -1,12 +1,12 @@
-import 'package:d_write/core/services/firebase_service.dart';
+import 'package:d_write/core/services/user_service.dart';
 import 'package:d_write/ui/views/home_screen.dart';
 import 'package:d_write/ui/views/register_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
-  final IFirebaseService firebaseService;
+  final IUserService userService;
 
-  const LoginScreen({super.key, required this.firebaseService});
+  const LoginScreen({super.key, required this.userService});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final user = await widget.firebaseService.signIn(
+    final user = await widget.userService.signIn(
       _emailController.text,
       _passwordController.text,
     );
@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(
             builder: (context) => HomeScreen(
               user: user,
-              firebaseService: widget.firebaseService,
+              userService: widget.userService,
             ),
           ),
         );
@@ -59,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(
         builder: (context) =>
-            FirebaseTestScreen(firebaseService: widget.firebaseService),
+            RegisterScreen(userService: widget.userService),
       ),
     );
   }

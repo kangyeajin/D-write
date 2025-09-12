@@ -1,6 +1,9 @@
+import 'package:d_write/core/models/quote_model.dart';
+import 'package:d_write/core/services/quote_service.dart';
+import 'package:d_write/ui/views/add_sentence_screen.dart';
 import 'package:d_write/ui/views/camera_screen.dart';
 import 'package:flutter/material.dart';
- 
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -10,7 +13,24 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final QuoteService _quoteService = QuoteService();
+  Quote? _quote;
   bool _buttonsVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRandomQuote();
+  }
+
+  Future<void> _loadRandomQuote() async {
+    final quote = await _quoteService.getRandomQuote();
+    if (mounted) {
+      setState(() {
+        _quote = quote;
+      });
+    }
+  }
 
   void _toggleButtonsVisibility(bool visible) {
     setState(() {
@@ -22,11 +42,14 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
+      // 좌측 메뉴
       drawer: Drawer(
+        backgroundColor: Colors.white,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
+            Container(
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 color: Colors.white,
               ),
@@ -63,6 +86,17 @@ class _MainScreenState extends State<MainScreen> {
               title: const Text('내가 쓴 메모'),
               onTap: () {},
             ),
+            ListTile(
+              title: const Text('문장 등록'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddSentenceScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -88,20 +122,21 @@ class _MainScreenState extends State<MainScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        '여름은 덥다...\n그래서 여름이다.',
+                      Text(
+                        _quote?.sentence ?? '등록된 문장이 없습니다.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 28),
+                        style: const TextStyle(fontSize: 28),
                       ),
                       AnimatedOpacity(
                         opacity: _buttonsVisible ? 1.0 : 0.0,
                         duration: const Duration(milliseconds: 300),
-                        child: const Column(
+                        child: Column(
                           children: [
-                            SizedBox(height: 10),
+                            const SizedBox(height: 10),
                             Text(
-                              '출처: 김정현',
-                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                              _quote != null ? '출처: ${_quote!.author}' : '',
+                              style: const TextStyle(
+                                  fontSize: 16, color: Colors.grey),
                             ),
                           ],
                         ),
@@ -137,6 +172,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
               ),
+
               AnimatedOpacity(
                 opacity: _buttonsVisible ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 300),
@@ -166,8 +202,8 @@ class _MainScreenState extends State<MainScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const CameraScreen(
-                              overlayText: '여름은 덥다...\n그래서 여름이다.',
+                            builder: (context) => CameraScreen(
+                              overlayText: _quote?.sentence ?? '',
                             ),
                           ),
                         );
