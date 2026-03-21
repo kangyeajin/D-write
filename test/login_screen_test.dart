@@ -10,7 +10,7 @@ import 'package:mockito/mockito.dart';
 import 'login_screen_test.mocks.dart';
 
 // MockFirebaseService 클래스를 생성하도록 build_runner에게 지시합니다.
-@GenerateMocks([IUserService, auth.User])
+@GenerateMocks([IUserService, auth.User]) 
 void main() {
   // 테스트에 사용할 가짜(Mock) 객체들을 선언합니다.
   late MockIFirebaseService mockFirebaseService;
