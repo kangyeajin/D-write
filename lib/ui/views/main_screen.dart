@@ -1,6 +1,7 @@
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/services/quote_service.dart';
 import 'package:d_write/ui/views/add_sentence_screen.dart';
+import 'package:d_write/ui/views/auto_create_sentence_screen.dart';
 import 'package:d_write/ui/views/camera_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -50,9 +51,7 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             Container(
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-              ),
+              decoration: const BoxDecoration(color: Colors.white),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,22 +69,10 @@ class _MainScreenState extends State<MainScreen> {
                 ],
               ),
             ),
-            ListTile(
-              title: const Text('내 정보'),
-              onTap: () {},
-            ),
-            ListTile(
-              title: const Text('달력'),
-              onTap: () {},
-            ),
-            ListTile(
-              title: const Text('좋아요 한 문장'),
-              onTap: () {},
-            ),
-            ListTile(
-              title: const Text('내가 쓴 메모'),
-              onTap: () {},
-            ),
+            ListTile(title: const Text('내 정보'), onTap: () {}),
+            ListTile(title: const Text('달력'), onTap: () {}),
+            ListTile(title: const Text('좋아요 한 문장'), onTap: () {}),
+            ListTile(title: const Text('내가 쓴 메모'), onTap: () {}),
             ListTile(
               title: const Text('문장 등록'),
               onTap: () {
@@ -93,6 +80,17 @@ class _MainScreenState extends State<MainScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const AddSentenceScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              title: const Text('문장 자동 생성'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AutoCreateSentenceScreen(),
                   ),
                 );
               },
@@ -136,7 +134,9 @@ class _MainScreenState extends State<MainScreen> {
                             Text(
                               _quote != null ? '출처: ${_quote!.author}' : '',
                               style: const TextStyle(
-                                  fontSize: 16, color: Colors.grey),
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                         ),
