@@ -3,12 +3,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:d_write/ui/views/main_screen.dart';
 import 'firebase_options.dart'; // flutterfire configure를 통해 생성됨
 
-void main() async { 
-  // 앱 실행 전 Firebase 초기화 
+void main() async {
+  // 앱 실행 전 Firebase 초기화
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
