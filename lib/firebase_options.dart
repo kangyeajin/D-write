@@ -41,29 +41,28 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBJuwW6YInNEm72jVMOHEj-yZ6giOFy9hk',
-    appId: '1:279320808556:web:afd76eb8b1f2add5e0dc49',
-    messagingSenderId: '279320808556',
-    projectId: 'd-write-d7aac',
-    authDomain: 'd-write-d7aac.firebaseapp.com',
-    storageBucket: 'd-write-d7aac.firebasestorage.app',
-    measurementId: 'G-8D1C03DNPE',
+    apiKey: 'AIzaSyBEC-5m7o-AV9vQWQtKsokhbO_ErxIT42I',
+    appId: '1:510814618249:web:2727504c9a21aa7c787c58',
+    messagingSenderId: '510814618249',
+    projectId: 'd-write-2f2a3',
+    authDomain: 'd-write-2f2a3.firebaseapp.com',
+    storageBucket: 'd-write-2f2a3.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDeYDH6KID2ohAt6W9T5NxHvKeykBNqXqY',
-    appId: '1:279320808556:android:abec051c8eadb308e0dc49',
-    messagingSenderId: '279320808556',
-    projectId: 'd-write-d7aac',
-    storageBucket: 'd-write-d7aac.firebasestorage.app',
+    apiKey: 'AIzaSyC7TNk9FdtUW00khd3k7X13lczzCeqmmPg',
+    appId: '1:510814618249:android:a58c2293a9dbf63a787c58',
+    messagingSenderId: '510814618249',
+    projectId: 'd-write-2f2a3',
+    storageBucket: 'd-write-2f2a3.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAiIpNzGA7XIbLUFtwr40f2-3ZRc3hGifw',
-    appId: '1:279320808556:ios:eb0f752c66db8f38e0dc49',
-    messagingSenderId: '279320808556',
-    projectId: 'd-write-d7aac',
-    storageBucket: 'd-write-d7aac.firebasestorage.app',
+    apiKey: 'AIzaSyBC_oO70ifqBk7fHf5EwtlT9S_YwvglvdE',
+    appId: '1:510814618249:ios:bc3da97a72686c8d787c58',
+    messagingSenderId: '510814618249',
+    projectId: 'd-write-2f2a3',
+    storageBucket: 'd-write-2f2a3.firebasestorage.app',
     iosBundleId: 'com.example.dWrite',
   );
 
@@ -77,12 +76,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBJuwW6YInNEm72jVMOHEj-yZ6giOFy9hk',
-    appId: '1:279320808556:web:17856b4ed5c6821fe0dc49',
-    messagingSenderId: '279320808556',
-    projectId: 'd-write-d7aac',
-    authDomain: 'd-write-d7aac.firebaseapp.com',
-    storageBucket: 'd-write-d7aac.firebasestorage.app',
-    measurementId: 'G-8CZPH66FBT',
+    apiKey: 'AIzaSyBEC-5m7o-AV9vQWQtKsokhbO_ErxIT42I',
+    appId: '1:510814618249:web:3650d3e253053a89787c58',
+    messagingSenderId: '510814618249',
+    projectId: 'd-write-2f2a3',
+    authDomain: 'd-write-2f2a3.firebaseapp.com',
+    storageBucket: 'd-write-2f2a3.firebasestorage.app',
   );
+
 }
