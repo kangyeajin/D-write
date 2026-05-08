@@ -1,5 +1,6 @@
 import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
+import 'package:d_write/core/models/user_model.dart';
 import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/services/quote_recommendation_service.dart';
@@ -44,6 +45,7 @@ class _MainScreenState extends State<MainScreen> {
 
   bool _isLiked = false;
   Memo? _currentMemo;
+  UserProfile? _userProfile;
 
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
@@ -51,15 +53,17 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _loadQuote();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUserTheme());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUserProfile());
   }
 
-  Future<void> _loadUserTheme() async {
+  Future<void> _loadUserProfile() async {
     final uid = _uid;
     if (uid == null) return;
     final profile = await _userService.getUserProfile(uid);
     if (!mounted || profile == null) return;
+    setState(() => _userProfile = profile);
     context.read<ThemeNotifier>().setTheme(profile.theme);
+    debugPrint('[AUTH] 프로필 로드 완료 — role=${profile.role.name}');
   }
 
   Future<void> _loadQuote() async {
@@ -436,33 +440,35 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
           ),
-          ListTile(
-            title: const Text('문장 등록'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (context) => const AddSentenceScreen(),
+          if (_userProfile?.role == UserRole.admin) ...[
+            ListTile(
+              title: const Text('문장 등록'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) => const AddSentenceScreen(),
+                ),
               ),
             ),
-          ),
-          ListTile(
-            title: const Text('문장 자동 생성'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (context) => const AutoCreateSentenceScreen(),
+            ListTile(
+              title: const Text('문장 자동 생성'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) => const AutoCreateSentenceScreen(),
+                ),
               ),
             ),
-          ),
-          ListTile(
-            title: const Text('월별 문장 관리'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => const AdminQuotesScreen(),
+            ListTile(
+              title: const Text('월별 문장 관리'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const AdminQuotesScreen(),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
