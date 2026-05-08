@@ -1,62 +1,63 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:d_write/core/models/memo_model.dart';
+import 'package:d_write/repositories/memo_repository.dart';
 
 abstract class IMemoService {
-  Future<void> saveMemo(String quoteId, String userId, String content);
+  Future<void> saveMemo(String userId, String quoteId, String content);
+  Future<Memo?> getMemoForUserAndQuote(String userId, String quoteId);
+  Future<void> updateMemo(String memoId, String content);
+  Future<void> deleteMemo(String memoId);
   Future<List<Memo>> getMemosForUser(String userId);
-  Future<List<Memo>> getMemosForQuote(String quoteId);
 }
 
 class MemoService implements IMemoService {
-  final FirebaseFirestore _firestore;
+  final MemoRepository _repo;
 
-  MemoService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  MemoService({MemoRepository? repo}) : _repo = repo ?? MemoRepository();
 
   @override
-  Future<void> saveMemo(String quoteId, String userId, String content) async {
+  Future<void> saveMemo(String userId, String quoteId, String content) async {
     try {
-      await _firestore.collection('memos').add({
-        'quoteId': quoteId,
-        'userId': userId,
-        'content': content,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      await _repo.addMemo(userId, quoteId, content);
     } catch (e) {
-      print(e);
+      debugPrint('MemoService.saveMemo error: $e');
+    }
+  }
+
+  @override
+  Future<Memo?> getMemoForUserAndQuote(String userId, String quoteId) async {
+    try {
+      return await _repo.getMemoForUserAndQuote(userId, quoteId);
+    } catch (e) {
+      debugPrint('MemoService.getMemoForUserAndQuote error: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> updateMemo(String memoId, String content) async {
+    try {
+      await _repo.updateMemo(memoId, content);
+    } catch (e) {
+      debugPrint('MemoService.updateMemo error: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteMemo(String memoId) async {
+    try {
+      await _repo.deleteMemo(memoId);
+    } catch (e) {
+      debugPrint('MemoService.deleteMemo error: $e');
     }
   }
 
   @override
   Future<List<Memo>> getMemosForUser(String userId) async {
     try {
-      QuerySnapshot snapshot = await _firestore
-          .collection('memos')
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
-      return snapshot.docs
-          .map((doc) => Memo.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .toList();
+      return await _repo.getMemosForUser(userId);
     } catch (e) {
-      print(e);
-      return [];
-    }
-  }
-
-  @override
-  Future<List<Memo>> getMemosForQuote(String quoteId) async {
-    try {
-      QuerySnapshot snapshot = await _firestore
-          .collection('memos')
-          .where('quoteId', isEqualTo: quoteId)
-          .orderBy('createdAt', descending: true)
-          .get();
-      return snapshot.docs
-          .map((doc) => Memo.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .toList();
-    } catch (e) {
-      print(e);
+      debugPrint('MemoService.getMemosForUser error: $e');
       return [];
     }
   }

@@ -1,6 +1,5 @@
 import 'package:d_write/core/services/user_service.dart';
-import 'package:d_write/ui/views/home_screen.dart';
-import 'package:d_write/ui/views/register_screen.dart';
+import 'package:d_write/presentation/auth/signup_step1_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,49 +16,38 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  void _login() async {
-    setState(() {
-      _isLoading = true;
-    });
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    setState(() => _isLoading = true);
 
     final user = await widget.userService.signIn(
       _emailController.text,
       _passwordController.text,
     );
 
-    if (mounted) {
-      if (user != null) {
-        // 로그인 성공 시 HomeScreen으로 이동
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(
-              user: user,
-              userService: widget.userService,
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('로그인에 실패했습니다.')),
-        );
-      }
-    }
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-    // 위에서 화면 전환이 일어나면 아래 코드는 실행되지 않을 수 있으므로, 실패 시에만 로딩 상태를 해제합니다.
-    if (mounted && _isLoading) {
-      setState(() {
-        _isLoading = false;
-      });
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인에 실패했습니다.')),
+      );
     }
+    // 로그인 성공 시 AuthGate가 authStateChanges 스트림을 감지하여 MainScreen으로 전환
   }
 
   void _regist() {
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (context) =>
-            RegisterScreen(userService: widget.userService),
+            SignupStep1Screen(userService: widget.userService),
       ),
     );
   }
@@ -102,9 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
+            const Center(child: CircularProgressIndicator()),
         ],
       ),
     );

@@ -5,6 +5,22 @@
 # Firebase options
 /lib/firebase_options.dart
 
+# API Keys & Secrets
+lib/core/config/secrets.dart
+
+# Personal tools & AI settings
+.bkit/
+.claude/
+
+# 임시 제외 (yj)
+harness_setup.txt
+화면/
+docs/
+AGENTS.md
+scripts/
+firestore.indexes.json
+test/
+
 # Miscellaneous
 *.class
 *.lock

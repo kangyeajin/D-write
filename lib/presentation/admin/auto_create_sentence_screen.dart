@@ -1,4 +1,6 @@
 import 'package:d_write/core/services/quote_service.dart';
+import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/repositories/quote_repository.dart';
 import 'package:flutter/material.dart';
 
 class AutoCreateSentenceScreen extends StatefulWidget {
@@ -10,7 +12,7 @@ class AutoCreateSentenceScreen extends StatefulWidget {
 }
 
 class _AutoCreateSentenceScreenState extends State<AutoCreateSentenceScreen> {
-  final QuoteService _quoteService = QuoteService();
+  final QuoteService _quoteService = QuoteService(repo: QuoteRepository());
   String? _generatedSentence;
   String? _generatedAuthor;
   bool _isLoading = false;
@@ -71,16 +73,16 @@ class _AutoCreateSentenceScreenState extends State<AutoCreateSentenceScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(24.0),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.cardLight,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: AppColors.onBackgroundLight.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
                     ],
-                    border: Border.all(color: Colors.grey[200]!),
+                    border: Border.all(color: AppColors.dividerLight),
                   ),
                   child: Column(
                     children: [
@@ -99,9 +101,9 @@ class _AutoCreateSentenceScreenState extends State<AutoCreateSentenceScreen> {
                         Text(
                           '- $_generatedAuthor',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            color: AppColors.subtitleLight,
                             fontStyle: FontStyle.italic,
                           ),
                         ),

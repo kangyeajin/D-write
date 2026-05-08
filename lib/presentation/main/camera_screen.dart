@@ -1,6 +1,6 @@
-
 import 'dart:io';
 import 'package:camera/camera.dart';
+import 'package:d_write/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gallery_saver_plus/gallery_saver.dart';
@@ -8,9 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 import 'package:logger/logger.dart';
 
-
 Logger logger = Logger();
- 
+
 class CameraScreen extends StatefulWidget {
   final String overlayText;
 
@@ -83,8 +82,8 @@ class _CameraScreenState extends State<CameraScreen> {
 
       // Save the image to the gallery
       await GallerySaver.saveImage(filePath);
-      
-      logger.i("이미지가 갤러리에 저장되었습니다: $filePath");
+
+      logger.i('이미지가 갤러리에 저장되었습니다: $filePath');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,7 +92,7 @@ class _CameraScreenState extends State<CameraScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      print(e);
+      debugPrint('CameraScreen save error: $e');
     }
   }
 
@@ -113,7 +112,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     widget.overlayText,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.backgroundLight,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),

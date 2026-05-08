@@ -1,28 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Memo {
+class Like {
   final String id;
-  final String quoteId;
   final String userId;
-  final String content;
-  final String date; // "YYYY-MM-DD" — 달력 표시용
+  final String quoteId;
+  final String date; // "YYYY-MM-DD"
   final Timestamp createdAt;
 
-  const Memo({
+  const Like({
     required this.id,
-    required this.quoteId,
     required this.userId,
-    required this.content,
+    required this.quoteId,
     required this.date,
     required this.createdAt,
   });
 
-  factory Memo.fromMap(Map<String, dynamic> data, String documentId) {
-    return Memo(
+  factory Like.fromMap(Map<String, dynamic> data, String documentId) {
+    return Like(
       id: documentId,
-      quoteId: (data['quoteId'] as String?) ?? '',
       userId: (data['userId'] as String?) ?? '',
-      content: (data['content'] as String?) ?? '',
+      quoteId: (data['quoteId'] as String?) ?? '',
       date: (data['date'] as String?) ?? '',
       createdAt: (data['createdAt'] as Timestamp?) ?? Timestamp.now(),
     );

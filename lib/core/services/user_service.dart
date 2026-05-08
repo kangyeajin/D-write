@@ -1,36 +1,50 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:d_write/core/models/user_model.dart';
+import 'package:d_write/repositories/user_repository.dart';
 
 abstract class IUserService {
   User? getCurrentUser();
   Future<UserCredential?> signInWithEmail(String email, String password);
   Future<UserProfile?> getUserProfile(String uid);
-  Future<void> saveUserProfile(String uid, String name, String info);
   Future<void> signOut();
-  Future<User?> signUp(String email, String password, String name, String info);
+  Future<User?> signUp({
+    required String email,
+    required String password,
+    required String nickname,
+    required String gender,
+    int? birthYear,
+    int? birthMonth,
+    int? birthDay,
+    required bool locationConsent,
+    required bool privacyConsent,
+  });
   Future<User?> signIn(String email, String password);
+  Future<bool> isEmailAvailable(String email);
+  Future<bool> isNicknameAvailable(String nickname);
+  Future<void> updateSettings(String uid, Map<String, dynamic> fields);
 }
 
 class UserService implements IUserService {
   final FirebaseAuth _auth;
-  final FirebaseFirestore _firestore;
+  final UserRepository _userRepository;
 
-  UserService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+  UserService({FirebaseAuth? auth, UserRepository? userRepository})
       : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _userRepository = userRepository ?? UserRepository();
 
   @override
-  User? getCurrentUser() {
-    return _auth.currentUser;
-  }
+  User? getCurrentUser() => _auth.currentUser;
 
   @override
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(email: email, password: password);
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
     } catch (e) {
-      print(e);
+      debugPrint('UserService.signInWithEmail error: $e');
       return null;
     }
   }
@@ -38,25 +52,10 @@ class UserService implements IUserService {
   @override
   Future<UserProfile?> getUserProfile(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
-      if (doc.exists) {
-        return UserProfile.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }
+      return await _userRepository.getUser(uid);
     } catch (e) {
-      print(e);
-    }
-    return null;
-  }
-
-  @override
-  Future<void> saveUserProfile(String uid, String name, String info) async {
-    try {
-      await _firestore.collection('users').doc(uid).set({
-        'name': name,
-        'info': info,
-      });
-    } catch (e) {
-      print(e);
+      debugPrint('UserService.getUserProfile error: $e');
+      return null;
     }
   }
 
@@ -66,33 +65,44 @@ class UserService implements IUserService {
   }
 
   @override
-  Future<User?> signUp(String email, String password, String name, String info) async {
+  Future<User?> signUp({
+    required String email,
+    required String password,
+    required String nickname,
+    required String gender,
+    int? birthYear,
+    int? birthMonth,
+    int? birthDay,
+    required bool locationConsent,
+    required bool privacyConsent,
+  }) async {
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-
-      User? user = userCredential.user;
-
+      final user = credential.user;
       if (user != null) {
-        await _firestore.collection('users').doc(user.uid).set({
-          'name': name,
-          'info': info,
-        });
+        final profile = UserProfile(
+          uid: user.uid,
+          email: email,
+          nickname: nickname,
+          gender: gender,
+          birthYear: birthYear,
+          birthMonth: birthMonth,
+          birthDay: birthDay,
+          locationConsent: locationConsent,
+          privacyConsent: privacyConsent,
+          role: UserRole.user,
+        );
+        await _userRepository.createUser(profile);
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'weak-password') {
-        print('비밀번호가 너무 약합니다.');
-      } else if (e.code == 'email-already-in-use') {
-        print('이미 사용 중인 이메일입니다.');
-      } else {
-        print('회원가입 실패: ${e.message}');
-      }
+      debugPrint('UserService.signUp error [${e.code}]: ${e.message}');
       return null;
     } catch (e) {
-      print('알 수 없는 오류 발생: $e');
+      debugPrint('UserService.signUp error: $e');
       return null;
     }
   }
@@ -100,17 +110,46 @@ class UserService implements IUserService {
   @override
   Future<User?> signIn(String email, String password) async {
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      return userCredential.user;
+      return credential.user;
     } on FirebaseAuthException catch (e) {
-      print('로그인 실패: ${e.message}');
+      debugPrint('UserService.signIn error [${e.code}]: ${e.message}');
       return null;
     } catch (e) {
-      print('알 수 없는 오류 발생: $e');
+      debugPrint('UserService.signIn error: $e');
       return null;
+    }
+  }
+
+  @override
+  Future<bool> isEmailAvailable(String email) async {
+    try {
+      return await _userRepository.isEmailAvailable(email);
+    } catch (e) {
+      debugPrint('UserService.isEmailAvailable error: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> isNicknameAvailable(String nickname) async {
+    try {
+      return await _userRepository.isNicknameAvailable(nickname);
+    } catch (e) {
+      debugPrint('UserService.isNicknameAvailable error: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<void> updateSettings(String uid, Map<String, dynamic> fields) async {
+    try {
+      await _userRepository.updateProfileFields(uid, fields);
+    } catch (e) {
+      debugPrint('UserService.updateSettings error: $e');
     }
   }
 }
