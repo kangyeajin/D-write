@@ -1,6 +1,6 @@
 
 import 'package:d_write/core/services/user_service.dart';
-import 'package:d_write/ui/views/login_screen.dart';
+import 'package:d_write/presentation/auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,11 +28,12 @@ void main() {
     // 1. mockFirebaseService.signIn 메소드가 호출될 때의 동작을 정의합니다.
     //    어떤 이메일/비밀번호가 들어오든, 1초 후에 mockUser를 반환하도록 설정합니다.
     when(mockFirebaseService.signIn(any, any)).thenAnswer((_) async {
-      await Future.delayed(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(seconds: 1));
       return mockUser;
     });
-    // 2. mockUser.email이 호출될 때 'test@example.com'을 반환하도록 설정합니다.
+    // 2. mockUser 프로퍼티를 스텁합니다.
     when(mockUser.email).thenReturn('test@example.com');
+    when(mockUser.uid).thenReturn('test-uid-123');
 
     // --- ACT (실행) ---
     // 3. LoginScreen 위젯을 빌드하고, mockFirebaseService를 주입합니다.
@@ -63,15 +64,16 @@ void main() {
     // 9. 로딩 인디케이터가 사라졌는지 확인합니다.
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
-    // 10. 로그인 성공 스낵바가 나타났는지 확인합니다.
-    expect(find.text('로그인 성공! 환영합니다, test@example.com'), findsOneWidget);
+    // 10. 로그인 성공 — 에러 스낵바 없음을 확인한다.
+    //     네비게이션은 AuthGate(authStateChanges 스트림)가 담당하므로 LoginScreen에서 검증하지 않는다.
+    expect(find.text('로그인에 실패했습니다.'), findsNothing);
   });
 
   testWidgets('LoginScreen failure flow', (WidgetTester tester) async {
     // --- ARRANGE (준비) ---
     // 1. signIn 메소드가 호출될 때 null을 반환하여 로그인 실패를 시뮬레이션합니다.
     when(mockFirebaseService.signIn(any, any)).thenAnswer((_) async {
-      await Future.delayed(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(seconds: 1));
       return null;
     });
 

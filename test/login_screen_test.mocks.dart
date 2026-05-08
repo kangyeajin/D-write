@@ -85,15 +85,6 @@ class MockIFirebaseService extends _i1.Mock implements _i3.IUserService {
           as _i4.Future<_i5.UserProfile?>);
 
   @override
-  _i4.Future<void> saveUserProfile(String? uid, String? name, String? info) =>
-      (super.noSuchMethod(
-            Invocation.method(#saveUserProfile, [uid, name, info]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
-
-  @override
   _i4.Future<void> signOut() =>
       (super.noSuchMethod(
             Invocation.method(#signOut, []),
@@ -103,14 +94,29 @@ class MockIFirebaseService extends _i1.Mock implements _i3.IUserService {
           as _i4.Future<void>);
 
   @override
-  _i4.Future<_i2.User?> signUp(
+  _i4.Future<_i2.User?> signUp({
     String? email,
     String? password,
-    String? name,
-    String? info,
-  ) =>
+    String? nickname,
+    String? gender,
+    int? birthYear,
+    int? birthMonth,
+    int? birthDay,
+    bool? locationConsent,
+    bool? privacyConsent,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#signUp, [email, password, name, info]),
+            Invocation.method(#signUp, [], {
+              #email: email,
+              #password: password,
+              #nickname: nickname,
+              #gender: gender,
+              #birthYear: birthYear,
+              #birthMonth: birthMonth,
+              #birthDay: birthDay,
+              #locationConsent: locationConsent,
+              #privacyConsent: privacyConsent,
+            }),
             returnValue: _i4.Future<_i2.User?>.value(),
           )
           as _i4.Future<_i2.User?>);
@@ -122,6 +128,22 @@ class MockIFirebaseService extends _i1.Mock implements _i3.IUserService {
             returnValue: _i4.Future<_i2.User?>.value(),
           )
           as _i4.Future<_i2.User?>);
+
+  @override
+  _i4.Future<bool> isEmailAvailable(String? email) =>
+      (super.noSuchMethod(
+            Invocation.method(#isEmailAvailable, [email]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> isNicknameAvailable(String? nickname) =>
+      (super.noSuchMethod(
+            Invocation.method(#isNicknameAvailable, [nickname]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
 }
 
 /// A class which mocks [User].

@@ -19,7 +19,6 @@ docs/
 AGENTS.md
 scripts/
 firestore.indexes.json
-test/
 
 # Miscellaneous
 *.class
