@@ -353,7 +353,7 @@ class _SaveEditScreenState extends State<SaveEditScreen> {
       children: [
         _SectionLabel(label: '배경', colors: colors),
         SizedBox(
-          height: 72,
+          height: 56,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
