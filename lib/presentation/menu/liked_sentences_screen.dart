@@ -3,7 +3,7 @@ import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/presentation/menu/liked_sentence_detail_screen.dart';
 import 'package:d_write/repositories/quote_repository.dart';
@@ -88,13 +88,14 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: colors.background,
         elevation: 0,
-        title: const Text('좋아요 한 문장'),
-        foregroundColor: AppColors.onBackgroundLight,
+        title: Text('좋아요 한 문장', style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary)),
+        foregroundColor: colors.textPrimary,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -115,16 +116,21 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
   }
 
   Widget _buildYearHeader(String year) {
+    final colors = AppColorTokens.of(context);
     return Padding(
       padding: const EdgeInsets.only(left: 20, top: 24, bottom: 8),
       child: Text(
         '$year년',
-        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+        style: AppTextStyles.body.copyWith(
+          fontWeight: FontWeight.w600,
+          color: colors.textPrimary,
+        ),
       ),
     );
   }
 
   Widget _buildItem(_LikedItem item) {
+    final colors = AppColorTokens.of(context);
     return Column(
       children: [
         InkWell(
@@ -151,13 +157,19 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_formatDate(item.like.date),
-                          style: AppTextStyles.bodySmall),
+                      Text(
+                        _formatDate(item.like.date),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         item.quote?.sentence ?? '(삭제된 문장)',
-                        style: AppTextStyles.body
-                            .copyWith(fontWeight: FontWeight.w600),
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
                         textAlign: TextAlign.left,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -166,7 +178,9 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
                         const SizedBox(height: 4),
                         Text(
                           item.memo!.content,
-                          style: AppTextStyles.bodySmall,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: colors.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -178,7 +192,7 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
             ),
           ),
         ),
-        const Divider(height: 1, color: AppColors.dividerLight),
+        Divider(height: 1, color: colors.divider),
       ],
     );
   }

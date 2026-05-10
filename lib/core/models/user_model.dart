@@ -14,7 +14,8 @@ class UserProfile {
   final bool notifPopup;
   final bool notifSound;
   final bool notifVibration;
-  final String theme; // 'light' | 'dark'
+  final String theme;   // 'light' | 'dark'
+  final String palette; // 'fog' | 'sand' | 'moss' | 'dawn'
   final String? notifTime; // "HH:mm", null = 미설정
 
   // ── 출석 / 문장 추천 ──────────────────────────────────────
@@ -38,6 +39,7 @@ class UserProfile {
     this.notifSound = false,
     this.notifVibration = false,
     this.theme = 'light',
+    this.palette = 'fog',
     this.notifTime,
     this.seenQuoteIds = const [],
     this.seenQuotesCount = 0,
@@ -61,6 +63,7 @@ class UserProfile {
       notifSound: (data['notifSound'] as bool?) ?? false,
       notifVibration: (data['notifVibration'] as bool?) ?? false,
       theme: (data['theme'] as String?) ?? 'light',
+      palette: (data['palette'] as String?) ?? 'fog',
       notifTime: data['notifTime'] as String?,
       seenQuoteIds: List<String>.from((data['seenQuoteIds'] as List?) ?? []),
       seenQuotesCount: (data['seen_quotes_count'] as int?) ?? 0,
@@ -79,6 +82,7 @@ class UserProfile {
     bool? notifSound,
     bool? notifVibration,
     String? theme,
+    String? palette,
     Object? notifTime = _sentinel,
   }) {
     return UserProfile(
@@ -96,6 +100,7 @@ class UserProfile {
       notifSound: notifSound ?? this.notifSound,
       notifVibration: notifVibration ?? this.notifVibration,
       theme: theme ?? this.theme,
+      palette: palette ?? this.palette,
       notifTime: notifTime == _sentinel ? this.notifTime : notifTime as String?,
     );
   }
@@ -117,6 +122,7 @@ class UserProfile {
       'notifSound': notifSound,
       'notifVibration': notifVibration,
       'theme': theme,
+      'palette': palette,
       if (notifTime != null) 'notifTime': notifTime,
     };
   }

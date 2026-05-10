@@ -32,8 +32,8 @@ class MyApp extends StatelessWidget {
       child: Consumer<ThemeNotifier>(
         builder: (context, themeNotifier, _) => MaterialApp(
           title: 'D-Write',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
+          theme: AppTheme.light(themeNotifier.palette),
+          darkTheme: AppTheme.dark(themeNotifier.palette),
           themeMode: themeNotifier.mode,
           home: const AuthGate(),
         ),

@@ -1,6 +1,6 @@
 import 'package:d_write/core/services/notification_service.dart';
 import 'package:d_write/core/services/user_service.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/core/theme/theme_notifier.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,6 +23,7 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
   bool _notifSound = false;
   bool _notifVibration = false;
   String _theme = 'light';
+  String _palette = 'fog';
   TimeOfDay? _notifTime;
   bool _isLoading = true;
 
@@ -46,6 +47,7 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
       _notifSound = profile.notifSound;
       _notifVibration = profile.notifVibration;
       _theme = profile.theme;
+      _palette = profile.palette;
       _notifTime = _parseTime(profile.notifTime);
       _isLoading = false;
     });
@@ -129,6 +131,13 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
     context.read<ThemeNotifier>().setTheme(theme);
   }
 
+  void _setPalette(String paletteId) {
+    if (_palette == paletteId) return;
+    setState(() => _palette = paletteId);
+    _updateField('palette', paletteId);
+    context.read<ThemeNotifier>().setPaletteById(paletteId);
+  }
+
   Future<void> _launchEmail() async {
     final uri = Uri(scheme: 'mailto', path: _contactEmail);
     if (await canLaunchUrl(uri)) {
@@ -138,30 +147,34 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: colors.background,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: colors.background,
+      appBar: AppBar(
+        backgroundColor: colors.background,
+        elevation: 0,
+        foregroundColor: colors.textPrimary,
+        title: Text(
+          '앱 설정',
+          style: AppTextStyles.sectionTitle
+              .copyWith(color: colors.textPrimary),
+        ),
+      ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Text(
-                  '돌아가기',
-                  style: AppTextStyles.button
-                      .copyWith(color: AppColors.onSurfaceLight),
-                ),
-              ),
-              const SizedBox(height: 40),
-              Text('알림 설정', style: AppTextStyles.sectionTitle),
+              const Text('알림 설정', style: AppTextStyles.sectionTitle),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -186,7 +199,7 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
               ),
               if (_notifPopup) ...[
                 const SizedBox(height: 20),
-                Text('알림 시간', style: AppTextStyles.sectionTitle),
+                const Text('알림 시간', style: AppTextStyles.sectionTitle),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: _pickTime,
@@ -196,9 +209,9 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
                       color: _notifTime != null
-                          ? AppColors.surfaceLight
-                          : AppColors.backgroundLight,
-                      border: Border.all(color: AppColors.dividerLight),
+                          ? colors.surface
+                          : colors.background,
+                      border: Border.all(color: colors.divider),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -218,7 +231,7 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
                 ),
               ],
               const SizedBox(height: 40),
-              Text('앱 테마', style: AppTextStyles.sectionTitle),
+              const Text('앱 테마', style: AppTextStyles.sectionTitle),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -235,13 +248,28 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 32),
+              const Text('컬러 테마', style: AppTextStyles.sectionTitle),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: AppPalette.values.map((p) {
+                  final isSelected = _palette == p.id;
+                  return _PaletteChip(
+                    palette: p,
+                    isSelected: isSelected,
+                    onTap: () => _setPalette(p.id),
+                  );
+                }).toList(),
+              ),
               const SizedBox(height: 40),
-              Text('도움말 및 문의사항', style: AppTextStyles.sectionTitle),
+              const Text('도움말 및 문의사항', style: AppTextStyles.sectionTitle),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _launchEmail,
-                child: Text(_contactEmail, style: AppTextStyles.body),
+                child: const Text(_contactEmail, style: AppTextStyles.body),
               ),
+              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -263,6 +291,7 @@ class _SelectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -270,14 +299,80 @@ class _SelectChip extends StatelessWidget {
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.surfaceLight
-              : AppColors.backgroundLight,
-          border: Border.all(color: AppColors.dividerLight),
+          color: isSelected ? colors.surface : colors.background,
+          border: Border.all(
+            color: isSelected ? colors.accent : colors.divider,
+            width: isSelected ? 1.5 : 1.0,
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
-          child: Text(label, style: AppTextStyles.button),
+          child: Text(
+            label,
+            style: AppTextStyles.button.copyWith(color: colors.textPrimary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 팔레트 선택 칩 — accent 색상 점으로 팔레트 미리보기
+class _PaletteChip extends StatelessWidget {
+  const _PaletteChip({
+    required this.palette,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final AppPalette palette;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  // 팔레트별 accent 색상 (라이트 기준)
+  static const _accentColors = {
+    AppPalette.fog:  Color(0xFF7B8FA1),
+    AppPalette.sand: Color(0xFFB5714E),
+    AppPalette.moss: Color(0xFF697A5E),
+    AppPalette.dawn: Color(0xFFC4826A),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final accent = _accentColors[palette]!;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? colors.surface : colors.background,
+          border: Border.all(
+            color: isSelected ? accent : colors.divider,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              palette.label,
+              style: AppTextStyles.button.copyWith(color: colors.textPrimary),
+            ),
+          ],
         ),
       ),
     );

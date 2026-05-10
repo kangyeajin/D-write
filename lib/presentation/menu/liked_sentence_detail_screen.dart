@@ -5,7 +5,7 @@ import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -181,7 +181,7 @@ class _LikedSentenceDetailScreenState
         ),
       );
     } catch (e) {
-      debugPrint('_saveImage error: $e');
+      debugPrint('[ERROR] _saveImage error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('저장에 실패했습니다.')),
@@ -195,14 +195,15 @@ class _LikedSentenceDetailScreenState
   // ── 빌드 ──────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     final quote = widget.quote;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: colors.background,
         elevation: 0,
-        foregroundColor: AppColors.onBackgroundLight,
+        foregroundColor: colors.textPrimary,
       ),
       body: Stack(
         children: [
@@ -223,13 +224,18 @@ class _LikedSentenceDetailScreenState
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             // 날짜
-                            Text(_dateLabel, style: AppTextStyles.bodySmall),
-                            const SizedBox(height: 16),
+                            Text(
+                              _dateLabel,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
                             // 문장 + 출처 (이미지 저장 영역)
                             RepaintBoundary(
                               key: _repaintKey,
                               child: ColoredBox(
-                                color: AppColors.backgroundLight,
+                                color: colors.background,
                                 child: Padding(
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 8),
@@ -239,14 +245,20 @@ class _LikedSentenceDetailScreenState
                                       Text(
                                         quote?.sentence ?? '(삭제된 문장)',
                                         textAlign: TextAlign.center,
-                                        style: AppTextStyles.sentenceTitle,
+                                        style: AppTextStyles.sentenceBody(
+                                          color: colors.textPrimary,
+                                        ),
                                       ),
                                       if (quote != null &&
                                           quote.author.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
+                                        const SizedBox(height: 12),
                                         Text(
-                                          '출처: ${quote.author}',
-                                          style: AppTextStyles.sentenceSource,
+                                          '— ${quote.author}',
+                                          style:
+                                              AppTextStyles.sentenceSource
+                                                  .copyWith(
+                                            color: colors.textSecondary,
+                                          ),
                                         ),
                                       ],
                                     ],
@@ -254,49 +266,53 @@ class _LikedSentenceDetailScreenState
                                 ),
                               ),
                             ),
-                            // 메모 박스 (내용 있을 때만, 버튼 위)
+                            // 메모 박스
                             if (_hasMemo) ...[
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 28),
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceLight,
+                                  color: colors.surface,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   _memo!.content,
-                                  style: AppTextStyles.body,
+                                  style: AppTextStyles.body.copyWith(
+                                    color: colors.textSecondary,
+                                  ),
                                   maxLines: 10,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
-                            // 버튼 (메모 아래 또는 출처 아래)
-                            const SizedBox(height: 28),
+                            // 액션 버튼
+                            const SizedBox(height: 36),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                _CircleButton(
+                                _ActionButton(
                                   icon: _isLiked
-                                      ? Icons.thumb_up
-                                      : Icons.thumb_up_alt_outlined,
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
                                   iconColor:
-                                      _isLiked ? AppColors.like : null,
+                                      _isLiked ? colors.accent : colors.textSecondary,
                                   onPressed: _toggleLike,
                                   tooltip: '좋아요',
                                 ),
-                                const SizedBox(width: 24),
-                                _CircleButton(
+                                const SizedBox(width: 32),
+                                _ActionButton(
                                   icon: _hasMemo
-                                      ? Icons.note_alt
-                                      : Icons.note_alt_outlined,
+                                      ? Icons.edit
+                                      : Icons.edit_outlined,
+                                  iconColor: colors.textSecondary,
                                   onPressed: _openMemoSheet,
                                   tooltip: '메모',
                                 ),
-                                const SizedBox(width: 24),
-                                _CircleButton(
+                                const SizedBox(width: 32),
+                                _ActionButton(
                                   icon: Icons.download_outlined,
+                                  iconColor: colors.textSecondary,
                                   onPressed: _isSaving ? null : _saveImage,
                                   tooltip: '저장',
                                 ),
@@ -322,33 +338,50 @@ class _LikedSentenceDetailScreenState
   }
 }
 
-class _CircleButton extends StatelessWidget {
-  final IconData icon;
-  final Color? iconColor;
-  final VoidCallback? onPressed;
-  final String tooltip;
-
-  const _CircleButton({
+class _ActionButton extends StatefulWidget {
+  const _ActionButton({
     required this.icon,
     required this.tooltip,
     this.iconColor,
     this.onPressed,
   });
 
+  final IconData icon;
+  final Color? iconColor;
+  final VoidCallback? onPressed;
+  final String tooltip;
+
+  @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
+    final isDisabled = widget.onPressed == null;
     return Tooltip(
-      message: tooltip,
+      message: widget.tooltip,
       child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.dividerLight),
-            shape: BoxShape.circle,
+        onTap: widget.onPressed,
+        onTapDown: isDisabled ? null : (_) => setState(() => _pressed = true),
+        onTapUp: isDisabled ? null : (_) => setState(() => _pressed = false),
+        onTapCancel: isDisabled ? null : () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.96 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Icon(
+              widget.icon,
+              size: 22,
+              color: isDisabled
+                  ? widget.iconColor?.withValues(alpha: 0.4)
+                  : widget.iconColor,
+            ),
           ),
-          child: Icon(icon, size: 22, color: iconColor),
         ),
       ),
     );

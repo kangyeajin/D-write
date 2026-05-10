@@ -1,98 +1,115 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
 /// D-Write 타이포그래피
 ///
-/// 규칙:
-/// - 위젯에서 `TextStyle(...)` 직접 생성 금지.
-/// - 반드시 이 클래스의 상수를 참조할 것.
-/// - 다크모드 전환 시: color만 AppColors.dark* 로 교체.
+/// UI 전체: Pretendard (단일 family, weight 400/600/700)
+/// 메인 문장: Gowun Batang (세리프, google_fonts)
+///
+/// 위젯에서 색상 변경: style.copyWith(color: AppColorTokens.of(context).textPrimary)
 class AppTextStyles {
   AppTextStyles._();
 
-  // ── 메인 화면: 문장 본문 (큰 글씨) ──────────────────────
-  static const TextStyle sentenceTitle = TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
-    height: 1.45,
-    color: AppColors.onBackgroundLight,
+  // ── 메인 화면: 문장 본문 (고운바탕 세리프) ─────────────────
+  static TextStyle sentenceBody({Color? color}) => GoogleFonts.gowunBatang(
+    fontSize: 22,
+    fontWeight: FontWeight.w400,
+    height: 1.80,
+    letterSpacing: 0,
+    color: color ?? AppColors.onBackgroundLight,
   );
 
-  // ── 메인 화면: 출처 (작품명·저자) ───────────────────────
+  // ── 메인 화면: 저자 ──────────────────────────────────────
   static const TextStyle sentenceSource = TextStyle(
+    fontFamily: 'Pretendard',
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    height: 1.6,
+    height: 1.5,
+    letterSpacing: 0,
     color: AppColors.subtitleLight,
   );
 
   // ── 메인 화면: 날짜 (MM.DD) ──────────────────────────────
   static const TextStyle dateLabel = TextStyle(
-    fontSize: 13,
+    fontFamily: 'Pretendard',
+    fontSize: 12,
     fontWeight: FontWeight.w400,
+    height: 1.0,
     letterSpacing: 1.5,
     color: AppColors.subtitleLight,
   );
 
-  // ── 일반: 본문 ───────────────────────────────────────────
+  // ── 일반: 본문 (목록, 메모 등) ───────────────────────────
   static const TextStyle body = TextStyle(
-    fontSize: 16,
+    fontFamily: 'Pretendard',
+    fontSize: 15,
     fontWeight: FontWeight.w400,
-    height: 1.5,
+    height: 1.65,
+    letterSpacing: 0,
     color: AppColors.onSurfaceLight,
   );
 
-  // ── 일반: 소제목 (메모 목록 등) ──────────────────────────
+  // ── 일반: 소제목 ──────────────────────────────────────────
   static const TextStyle bodySmall = TextStyle(
-    fontSize: 13,
+    fontFamily: 'Pretendard',
+    fontSize: 12,
     fontWeight: FontWeight.w400,
     height: 1.5,
+    letterSpacing: 0,
     color: AppColors.subtitleLight,
+  );
+
+  // ── 섹션 제목 ─────────────────────────────────────────────
+  static const TextStyle sectionTitle = TextStyle(
+    fontFamily: 'Pretendard',
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    letterSpacing: 0,
+    color: AppColors.onBackgroundLight,
   );
 
   // ── 버튼 ─────────────────────────────────────────────────
   static const TextStyle button = TextStyle(
+    fontFamily: 'Pretendard',
     fontSize: 14,
     fontWeight: FontWeight.w600,
+    height: 1.1,
+    letterSpacing: 0.1,
     color: AppColors.onBackgroundLight,
   );
 
   // ── 입력 필드 레이블 ─────────────────────────────────────
   static const TextStyle inputLabel = TextStyle(
+    fontFamily: 'Pretendard',
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.subtitleLight,
   );
 
-  // ── 에러 메시지 ───────────────────────────────────────────
+  // ── 에러 / 성공 ───────────────────────────────────────────
   static const TextStyle errorText = TextStyle(
+    fontFamily: 'Pretendard',
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.error,
   );
 
-  // ── 성공 메시지 ───────────────────────────────────────────
   static const TextStyle successText = TextStyle(
+    fontFamily: 'Pretendard',
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.success,
   );
 
-  // ── 설정 화면: 섹션 제목 ──────────────────────────────────
-  static const TextStyle sectionTitle = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    height: 1.4,
-    color: AppColors.onBackgroundLight,
-  );
-
-  // ── TextTheme 통합 (ThemeData에 등록) ────────────────────
+  // ── TextTheme 통합 ────────────────────────────────────────
   static const TextTheme textTheme = TextTheme(
-    displayLarge: sentenceTitle,   // 문장 본문
-    bodyLarge: body,               // 일반 본문
-    bodySmall: bodySmall,          // 소제목
-    labelLarge: button,            // 버튼
-    labelSmall: inputLabel,        // 입력 레이블
+    bodyLarge:   body,
+    bodySmall:   bodySmall,
+    labelLarge:  button,
+    labelSmall:  inputLabel,
+    titleMedium: sectionTitle,
   );
 }

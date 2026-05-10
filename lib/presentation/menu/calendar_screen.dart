@@ -6,7 +6,7 @@ import 'package:d_write/core/services/local_data_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/services/quote_service.dart';
 import 'package:d_write/core/services/user_service.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/presentation/menu/liked_sentence_detail_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -52,16 +52,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return;
     }
 
-    // Hive 출석 (네트워크 없음)
     var attendanceDates = _local.localAttendanceDates.toSet();
 
-    // 좋아요 + 메모 병렬 조회 (2 queries)
     final results = await Future.wait([
       _likeService.getLikesForUser(uid),
       _memoService.getMemosForUser(uid),
     ]);
 
-    // Hive가 비어있으면 Firestore 사용자 프로필 1회 조회
     if (attendanceDates.isEmpty) {
       final profile = await _userService.getUserProfile(uid);
       if (profile != null) {
@@ -173,8 +170,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
+            final colors = AppColorTokens.of(ctx);
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: colors.background,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                 child: Column(
@@ -184,8 +184,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chevron_left),
-                          onPressed: () => setDialogState(() => pickerYear--),
+                          icon: Icon(Icons.chevron_left,
+                              color: colors.textPrimary),
+                          onPressed: () =>
+                              setDialogState(() => pickerYear--),
                         ),
                         SizedBox(
                           width: 88,
@@ -195,14 +197,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               style: AppTextStyles.body.copyWith(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 18,
-                                color: AppColors.onBackgroundLight,
+                                color: colors.textPrimary,
                               ),
                             ),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.chevron_right),
-                          onPressed: () => setDialogState(() => pickerYear++),
+                          icon: Icon(Icons.chevron_right,
+                              color: colors.textPrimary),
+                          onPressed: () =>
+                              setDialogState(() => pickerYear++),
                         ),
                       ],
                     ),
@@ -216,29 +220,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       childAspectRatio: 1.6,
                       children: List.generate(12, (i) {
                         final m = i + 1;
-                        final isActive = pickerYear == _year && m == _month;
+                        final isActive =
+                            pickerYear == _year && m == _month;
                         final isPickerSelected = m == pickerMonth;
                         return GestureDetector(
-                          onTap: () => setDialogState(() => pickerMonth = m),
+                          onTap: () =>
+                              setDialogState(() => pickerMonth = m),
                           child: Container(
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? AppColors.primary
+                                  ? colors.accent
                                   : isPickerSelected
-                                      ? AppColors.primary.withValues(alpha: 0.12)
-                                      : AppColors.surfaceLight,
+                                      ? colors.accent
+                                          .withValues(alpha: 0.12)
+                                      : colors.surface,
                               borderRadius: BorderRadius.circular(8),
                               border: isPickerSelected && !isActive
-                                  ? Border.all(color: AppColors.primary, width: 1.5)
+                                  ? Border.all(
+                                      color: colors.accent, width: 1.5)
                                   : null,
                             ),
                             alignment: Alignment.center,
                             child: Text(
                               '$m월',
                               style: TextStyle(
+                                fontFamily: 'Pretendard',
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: isActive ? Colors.white : AppColors.onBackgroundLight,
+                                color: isActive
+                                    ? Colors.white
+                                    : colors.textPrimary,
                               ),
                             ),
                           ),
@@ -250,11 +261,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       width: double.infinity,
                       child: TextButton(
                         style: TextButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: colors.accent,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 12),
                         ),
                         onPressed: () {
                           setState(() {
@@ -268,6 +280,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         child: const Text(
                           '확인',
                           style: TextStyle(
+                            fontFamily: 'Pretendard',
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                             fontSize: 15,
@@ -285,27 +298,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // ── 빌드 ──────────────────────────────────────────────────────
+  // ── 빌드 ──────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: colors.background,
         elevation: 0,
-        title: const Text('달력'),
-        foregroundColor: AppColors.onBackgroundLight,
+        title: Text(
+          '달력',
+          style: AppTextStyles.sectionTitle
+              .copyWith(color: colors.textPrimary),
+        ),
+        foregroundColor: colors.textPrimary,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                _buildHeader(),
-                _buildDayLabels(),
-                const Divider(height: 1, color: AppColors.dividerLight),
-                _buildCalendarGrid(),
-                const Divider(height: 1, color: AppColors.dividerLight),
+                _buildHeader(colors),
+                _buildDayLabels(colors),
+                Divider(height: 1, color: colors.divider),
+                _buildCalendarGrid(colors),
+                Divider(height: 1, color: colors.divider),
                 Expanded(
                   child: _selectedDate != null
                       ? _buildDayDetail(_selectedDate!)
@@ -316,16 +335,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppColorTokens colors) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: Icon(Icons.chevron_left, color: colors.textPrimary),
             onPressed: _prevMonth,
-            color: AppColors.onBackgroundLight,
           ),
           const SizedBox(width: 8),
           GestureDetector(
@@ -338,33 +356,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   style: AppTextStyles.body.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 20,
-                    color: AppColors.onBackgroundLight,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.arrow_drop_down, size: 22, color: AppColors.onBackgroundLight),
+                Icon(Icons.arrow_drop_down,
+                    size: 22, color: colors.textSecondary),
               ],
             ),
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: Icon(Icons.chevron_right, color: colors.textPrimary),
             onPressed: _nextMonth,
-            color: AppColors.onBackgroundLight,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDayLabels() {
+  Widget _buildDayLabels(AppColorTokens colors) {
     const labels = ['일', '월', '화', '수', '목', '금', '토'];
     return Padding(
       padding: const EdgeInsets.only(left: 8, right: 8, bottom: 6),
       child: Row(
         children: labels.asMap().entries.map((e) {
-          Color color = AppColors.subtitleLight;
-          if (e.key == 0) color = AppColors.like;
+          Color color = colors.textSecondary;
+          if (e.key == 0) color = colors.accent;
           if (e.key == 6) color = Colors.blue.shade400;
           return Expanded(
             child: Center(
@@ -383,7 +401,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid() {
+  Widget _buildCalendarGrid(AppColorTokens colors) {
     final firstDay = DateTime(_year, _month, 1);
     final startOffset = firstDay.weekday % 7;
     final daysInMonth = DateTime(_year, _month + 1, 0).day;
@@ -402,8 +420,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               if (day < 1 || day > daysInMonth) {
                 return SizedBox(width: cellW, height: 52);
               }
-              final dateStr = '$_year-${_pad(_month)}-${_pad(day)}';
+              final dateStr =
+                  '$_year-${_pad(_month)}-${_pad(day)}';
               return _buildDayCell(
+                colors: colors,
                 day: day,
                 col: col,
                 dateStr: dateStr,
@@ -419,6 +439,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildDayCell({
+    required AppColorTokens colors,
     required int day,
     required int col,
     required String dateStr,
@@ -432,23 +453,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final isLiked = _likeByDate.containsKey(dateStr);
     final hasMemo = _memoByDate.containsKey(dateStr);
 
-    // 출석 바 연결 여부
-    final prevDateStr = day > 1 ? '$_year-${_pad(_month)}-${_pad(day - 1)}' : null;
-    final nextDateStr = day < daysInMonth ? '$_year-${_pad(_month)}-${_pad(day + 1)}' : null;
-    final prevAttended = isAttended && prevDateStr != null && _attendanceDates.contains(prevDateStr);
-    final nextAttended = isAttended && nextDateStr != null && _attendanceDates.contains(nextDateStr);
+    final prevDateStr = day > 1
+        ? '$_year-${_pad(_month)}-${_pad(day - 1)}'
+        : null;
+    final nextDateStr = day < daysInMonth
+        ? '$_year-${_pad(_month)}-${_pad(day + 1)}'
+        : null;
+    final prevAttended = isAttended &&
+        prevDateStr != null &&
+        _attendanceDates.contains(prevDateStr);
+    final nextAttended = isAttended &&
+        nextDateStr != null &&
+        _attendanceDates.contains(nextDateStr);
 
     // 원 스타일
     Color? circleFill;
     Border? circleBorder;
     if (isToday) {
-      circleFill = AppColors.primary;
+      circleFill = colors.accent;
     } else if (isLiked) {
-      circleFill = const Color(0xFFFFE0E6);
-      if (isSelected) circleBorder = Border.all(color: AppColors.primary, width: 1.5);
+      circleFill = colors.accentMuted;
+      if (isSelected) {
+        circleBorder = Border.all(color: colors.accent, width: 1.5);
+      }
     } else if (isSelected) {
-      circleFill = AppColors.primary.withValues(alpha: 0.12);
-      circleBorder = Border.all(color: AppColors.primary, width: 1.5);
+      circleFill = colors.accent.withValues(alpha: 0.12);
+      circleBorder = Border.all(color: colors.accent, width: 1.5);
     }
 
     // 날짜 텍스트 색
@@ -456,16 +486,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (isToday) {
       textColor = Colors.white;
     } else if (col == 0) {
-      textColor = AppColors.like;
+      textColor = colors.accent;
     } else if (col == 6) {
       textColor = Colors.blue.shade400;
     } else {
-      textColor = AppColors.onBackgroundLight;
+      textColor = colors.textPrimary;
     }
 
     final underlineColor = isToday
         ? Colors.white.withValues(alpha: 0.8)
-        : AppColors.onBackgroundLight.withValues(alpha: 0.45);
+        : colors.textPrimary.withValues(alpha: 0.45);
 
     return GestureDetector(
       onTap: () => _selectDate(dateStr),
@@ -474,7 +504,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
         height: 52,
         child: Stack(
           children: [
-            // Stack 크기 정의
             SizedBox(width: cellW, height: 52),
             // 출석 형광펜 바
             if (isAttended)
@@ -485,15 +514,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 right: nextAttended ? 0 : cellW / 2 - 16,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFB8EEC4),
+                    color: colors.accentMuted.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.horizontal(
-                      left: prevAttended ? Radius.zero : const Radius.circular(12),
-                      right: nextAttended ? Radius.zero : const Radius.circular(12),
+                      left: prevAttended
+                          ? Radius.zero
+                          : const Radius.circular(12),
+                      right: nextAttended
+                          ? Radius.zero
+                          : const Radius.circular(12),
                     ),
                   ),
                 ),
               ),
-            // 날짜 원 (좋아요 분홍 / 오늘 primary / 선택 outline)
+            // 날짜 원
             Positioned.fill(
               child: Center(
                 child: Container(
@@ -508,6 +541,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: Text(
                     '$day',
                     style: TextStyle(
+                      fontFamily: 'Pretendard',
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: textColor,
@@ -551,20 +585,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (activeDates.isEmpty) {
       return const Center(
-        child: Text('이번 달 기록이 없습니다.', style: AppTextStyles.bodySmall),
+        child: Text(
+          '이번 달 기록이 없습니다.',
+          style: AppTextStyles.bodySmall,
+        ),
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: 16),
       itemCount: activeDates.length,
-      separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: AppColors.dividerLight),
-      itemBuilder: (_, i) => _buildRecordItem(activeDates[i]),
+      separatorBuilder: (context, _) {
+        final colors = AppColorTokens.of(context);
+        return Divider(height: 1, color: colors.divider);
+      },
+      itemBuilder: (context, i) => _buildRecordItem(context, activeDates[i]),
     );
   }
 
-  Widget _buildRecordItem(String dateStr) {
+  Widget _buildRecordItem(BuildContext context, String dateStr) {
+    final colors = AppColorTokens.of(context);
     final like = _likeByDate[dateStr];
     final memo = _memoByDate[dateStr];
     final quote = _quoteByDate[dateStr];
@@ -582,12 +622,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(displayDate, style: AppTextStyles.bodySmall),
+                  Text(
+                    displayDate,
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: colors.textSecondary),
+                  ),
                   if (like != null) ...[
                     const SizedBox(height: 6),
                     Text(
                       quote?.sentence ?? '불러오는 중...',
-                      style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -595,8 +642,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
-                          '출처: ${quote!.author}',
-                          style: AppTextStyles.bodySmall,
+                          '— ${quote!.author}',
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: colors.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -606,9 +654,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     const SizedBox(height: 4),
                     Text(
                       memo.content,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.onSurfaceLight,
-                      ),
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: colors.textSecondary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -618,9 +665,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             if (like != null) ...[
               const SizedBox(width: 12),
-              const Padding(
-                padding: EdgeInsets.only(top: 22),
-                child: Icon(Icons.favorite, color: AppColors.like, size: 18),
+              Padding(
+                padding: const EdgeInsets.only(top: 22),
+                child: Icon(Icons.favorite,
+                    color: colors.accent, size: 18),
               ),
             ],
           ],
@@ -632,12 +680,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // ── 선택 날짜 상세 ─────────────────────────────────────────────
 
   Widget _buildDayDetail(String dateStr) {
+    final colors = AppColorTokens.of(context);
     final like = _likeByDate[dateStr];
     final memo = _memoByDate[dateStr];
 
     if (like == null && memo == null) {
-      return const Center(
-        child: Text('기록이 없습니다.', style: AppTextStyles.bodySmall),
+      return Center(
+        child: Text(
+          '기록이 없습니다.',
+          style: AppTextStyles.bodySmall
+              .copyWith(color: colors.textSecondary),
+        ),
       );
     }
 
@@ -648,7 +701,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return InkWell(
       onTap: () => _navigateToDetail(dateStr),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -656,12 +710,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(displayDate, style: AppTextStyles.bodySmall),
+                  Text(
+                    displayDate,
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: colors.textSecondary),
+                  ),
                   if (like != null) ...[
                     const SizedBox(height: 6),
                     Text(
                       quote?.sentence ?? '불러오는 중...',
-                      style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -669,8 +730,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
-                          '출처: ${quote!.author}',
-                          style: AppTextStyles.bodySmall,
+                          '— ${quote!.author}',
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: colors.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -680,9 +742,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     const SizedBox(height: 4),
                     Text(
                       memo.content,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.onSurfaceLight,
-                      ),
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: colors.textSecondary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -692,9 +753,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             if (like != null) ...[
               const SizedBox(width: 12),
-              const Padding(
-                padding: EdgeInsets.only(top: 22),
-                child: Icon(Icons.favorite, color: AppColors.like, size: 18),
+              Padding(
+                padding: const EdgeInsets.only(top: 22),
+                child: Icon(Icons.favorite,
+                    color: colors.accent, size: 18),
               ),
             ],
           ],

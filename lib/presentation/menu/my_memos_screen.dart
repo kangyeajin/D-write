@@ -3,7 +3,7 @@ import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/presentation/menu/liked_sentence_detail_screen.dart';
 import 'package:d_write/repositories/quote_repository.dart';
@@ -25,7 +25,6 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
   final _quoteRepo = QuoteRepository();
 
   bool _isLoading = true;
-  // String → 연도 헤더, _MemoItem → 데이터 행
   List<dynamic> _rows = [];
 
   @override
@@ -88,43 +87,57 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: colors.background,
         elevation: 0,
-        title: const Text('내가 쓴 메모'),
-        foregroundColor: AppColors.onBackgroundLight,
+        title: Text(
+          '내가 쓴 메모',
+          style: AppTextStyles.sectionTitle
+              .copyWith(color: colors.textPrimary),
+        ),
+        foregroundColor: colors.textPrimary,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _rows.isEmpty
               ? const Center(
-                  child: Text('작성한 메모가 없습니다.', style: AppTextStyles.bodySmall),
+                  child: Text(
+                    '작성한 메모가 없습니다.',
+                    style: AppTextStyles.bodySmall,
+                  ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.only(bottom: 16),
                   itemCount: _rows.length,
                   itemBuilder: (context, index) {
                     final row = _rows[index];
-                    if (row is String) return _buildYearHeader(row);
-                    return _buildItem(row as _MemoItem);
+                    if (row is String) {
+                      return _buildYearHeader(row, colors);
+                    }
+                    return _buildItem(row as _MemoItem, colors);
                   },
                 ),
     );
   }
 
-  Widget _buildYearHeader(String year) {
+  Widget _buildYearHeader(String year, AppColorTokens colors) {
     return Padding(
       padding: const EdgeInsets.only(left: 20, top: 24, bottom: 8),
       child: Text(
         '$year년',
-        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+        style: AppTextStyles.body.copyWith(
+          fontWeight: FontWeight.w600,
+          color: colors.textPrimary,
+        ),
       ),
     );
   }
 
-  Widget _buildItem(_MemoItem item) {
+  Widget _buildItem(_MemoItem item, AppColorTokens colors) {
     return Column(
       children: [
         InkWell(
@@ -144,7 +157,8 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
             _load();
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -152,13 +166,18 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_formatDate(item.memo.date),
-                          style: AppTextStyles.bodySmall),
+                      Text(
+                        _formatDate(item.memo.date),
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: colors.textSecondary),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         item.quote?.sentence ?? '(삭제된 문장)',
-                        style: AppTextStyles.body
-                            .copyWith(fontWeight: FontWeight.w600),
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
                         textAlign: TextAlign.left,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -166,7 +185,8 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
                       const SizedBox(height: 4),
                       Text(
                         item.memo.content,
-                        style: AppTextStyles.bodySmall,
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: colors.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -175,13 +195,13 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
                 ),
                 if (item.isLiked) ...[
                   const SizedBox(width: 12),
-                  const Icon(Icons.favorite, color: AppColors.like, size: 18),
+                  Icon(Icons.favorite, color: colors.accent, size: 18),
                 ],
               ],
             ),
           ),
         ),
-        const Divider(height: 1, color: AppColors.dividerLight),
+        Divider(height: 1, color: colors.divider),
       ],
     );
   }

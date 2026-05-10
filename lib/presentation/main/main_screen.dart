@@ -6,7 +6,7 @@ import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/services/quote_recommendation_service.dart';
 import 'package:d_write/core/services/quote_service.dart';
 import 'package:d_write/core/services/user_service.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/core/theme/theme_notifier.dart';
 import 'package:d_write/presentation/admin/add_sentence_screen.dart';
@@ -42,7 +42,6 @@ class _MainScreenState extends State<MainScreen> {
 
   Quote? _quote;
   bool _active = false;
-
   bool _isLiked = false;
   Memo? _currentMemo;
   UserProfile? _userProfile;
@@ -62,8 +61,10 @@ class _MainScreenState extends State<MainScreen> {
     final profile = await _userService.getUserProfile(uid);
     if (!mounted || profile == null) return;
     setState(() => _userProfile = profile);
-    context.read<ThemeNotifier>().setTheme(profile.theme);
-    debugPrint('[AUTH] 프로필 로드 완료 — role=${profile.role.name}');
+    final notifier = context.read<ThemeNotifier>();
+    notifier.setTheme(profile.theme);
+    notifier.setPaletteById(profile.palette);
+    debugPrint('[AUTH] 프로필 로드 완료 — role=${profile.role.name}, palette=${profile.palette}');
   }
 
   Future<void> _loadQuote() async {
@@ -93,14 +94,14 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) setState(() => _currentMemo = memo);
   }
 
-  // ── 좋아요 (낙관적 업데이트) ──────────────────────────────────────────
+  // ── 좋아요 (낙관적 업데이트) ──────────────────────────────────
   Future<void> _toggleLike() async {
     final uid = _uid;
     final quoteId = _quote?.id;
     if (uid == null || quoteId == null) return;
 
     final previous = _isLiked;
-    setState(() => _isLiked = !_isLiked); // 즉시 UI 반전
+    setState(() => _isLiked = !_isLiked);
 
     try {
       if (previous) {
@@ -109,11 +110,11 @@ class _MainScreenState extends State<MainScreen> {
         await _likeService.addLike(uid, quoteId);
       }
     } catch (_) {
-      if (mounted) setState(() => _isLiked = previous); // 실패 시 롤백
+      if (mounted) setState(() => _isLiked = previous);
     }
   }
 
-  // ── 메모 바텀시트 ─────────────────────────────────────────────────────
+  // ── 메모 다이얼로그 ───────────────────────────────────────────
   void _openMemoSheet() {
     final uid = _uid;
     final quoteId = _quote?.id;
@@ -121,6 +122,7 @@ class _MainScreenState extends State<MainScreen> {
 
     final controller = TextEditingController(text: _currentMemo?.content ?? '');
     final isEditing = _currentMemo != null;
+    final colors = AppColorTokens.of(context);
 
     showDialog<void>(
       context: context,
@@ -132,9 +134,12 @@ class _MainScreenState extends State<MainScreen> {
             autofocus: true,
             maxLines: 5,
             minLines: 3,
-            decoration: const InputDecoration(
+            style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+            decoration: InputDecoration(
               hintText: '이 문장에 대한 생각을 기록해보세요.',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderSide: BorderSide(color: colors.divider),
+              ),
             ),
           ),
           actions: [
@@ -144,7 +149,7 @@ class _MainScreenState extends State<MainScreen> {
                   Navigator.pop(dialogContext);
                   await _deleteMemo();
                 },
-                child: const Text('삭제', style: TextStyle(color: Colors.red)),
+                child: Text('삭제', style: TextStyle(color: colors.error)),
               ),
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -169,7 +174,6 @@ class _MainScreenState extends State<MainScreen> {
       if (_currentMemo != null) await _deleteMemo();
       return;
     }
-
     if (_currentMemo != null) {
       await _memoService.updateMemo(_currentMemo!.id, content);
     } else {
@@ -185,8 +189,6 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) setState(() => _currentMemo = null);
   }
 
-  // ── 이미지 저장 ───────────────────────────────────────────────────────
-  // ── 활성화 상태 전환 ──────────────────────────────────────────────────
   void _activate() {
     if (!_active) setState(() => _active = true);
   }
@@ -200,276 +202,368 @@ class _MainScreenState extends State<MainScreen> {
     return '${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')}';
   }
 
-  // ── 빌드 ──────────────────────────────────────────────────────────────
+  // ── 빌드 ──────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final size = MediaQuery.sizeOf(context);
+    final hPad = (size.width * 0.08).clamp(24.0, 40.0);
+
     return Scaffold(
       key: _scaffoldKey,
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, colors),
+      backgroundColor: colors.background,
       body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: _deactivate,
-        onVerticalDragUpdate: (details) {
-          if (details.delta.dy < -5) {
-            _activate();
-          } else if (details.delta.dy > 5) {
-            _deactivate();
-          }
+        onVerticalDragUpdate: (d) {
+          if (d.delta.dy < -5) { _activate(); }
+          else if (d.delta.dy > 5) { _deactivate(); }
         },
-        child: Container(
-          color: AppColors.backgroundLight,
-          child: Stack(
-            children: [
-              _buildCenter(),
-              _buildTopLeft(),
-              _buildTopRight(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCenter() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            AnimatedOpacity(
-              opacity: _active ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(_dateLabel, style: AppTextStyles.dateLabel),
-              ),
-            ),
-            ColoredBox(
-              color: AppColors.backgroundLight,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedOpacity(
-                      opacity: _active ? 1.0 : 0.3,
-                      duration: const Duration(milliseconds: 300),
-                      child: Text(
-                        _quote?.sentence ?? '등록된 문장이 없습니다.',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.sentenceTitle,
-                      ),
-                    ),
-                    AnimatedOpacity(
-                      opacity: _active ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          _quote != null ? '— ${_quote!.author}' : '',
-                          style: AppTextStyles.sentenceSource,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            AnimatedOpacity(
-              opacity: _active ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 28),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // 좋아요
-                    IconButton(
-                      icon: Icon(
-                        _isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
-                        color: _isLiked ? AppColors.like : null,
-                      ),
-                      onPressed: _active ? _toggleLike : null,
-                      tooltip: '좋아요',
-                    ),
-                    // 메모
-                    IconButton(
-                      icon: Icon(
-                        _currentMemo != null
-                            ? Icons.note_alt
-                            : Icons.note_alt_outlined,
-                      ),
-                      onPressed: _active ? _openMemoSheet : null,
-                      tooltip: '메모',
-                    ),
-                    // 저장
-                    IconButton(
-                      icon: const Icon(Icons.download_outlined),
-                      onPressed: _active && _quote != null
-                          ? () => Navigator.push(
-                                context,
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      SaveEditScreen(quote: _quote!),
-                                ),
-                              )
-                          : null,
-                      tooltip: '저장',
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildBody(context, colors, hPad, size),
+            _buildTopLeft(context, colors),
+            _buildTopRight(context, colors),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTopLeft() {
-    return AnimatedOpacity(
-      opacity: _active ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 300),
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: Padding(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 8,
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.menu, size: 28),
-            onPressed: _active ? () => _scaffoldKey.currentState?.openDrawer() : null,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildBody(
+    BuildContext context,
+    AppColorTokens colors,
+    double hPad,
+    Size size,
+  ) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: hPad),
+        child: Column(
+          children: [
+            SizedBox(height: size.height * 0.18),
 
-  Widget _buildTopRight() {
-    return AnimatedOpacity(
-      opacity: _active ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 300),
-      child: Align(
-        alignment: Alignment.topRight,
-        child: Padding(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 8,
-            right: 8,
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.camera_alt_outlined, size: 28),
-            onPressed: _active
-                ? () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (context) => CameraScreen(
-                          overlayText: _quote?.sentence ?? '',
-                        ),
-                      ),
-                    )
-                : null,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      backgroundColor: AppColors.backgroundLight,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          Container(
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-            decoration: const BoxDecoration(color: AppColors.backgroundLight),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
+            // 날짜
+            _Fade(
+              visible: _active,
+              child: Text(
+                _dateLabel,
+                style: AppTextStyles.dateLabel.copyWith(
+                  color: colors.textSecondary,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AppOptionsScreen(),
-                    ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // 메인 문장
+            AnimatedOpacity(
+              opacity: _active ? 1.0 : 0.22,
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeInOut,
+              child: Text(
+                _quote?.sentence ?? '등록된 문장이 없습니다.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.sentenceBody(color: colors.textPrimary),
+              ),
+            ),
+
+            // 저자
+            _Fade(
+              visible: _active,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: Text(
+                  _quote != null ? '— ${_quote!.author}' : '',
+                  style: AppTextStyles.sentenceSource.copyWith(
+                    color: colors.textSecondary,
                   ),
                 ),
-              ],
-            ),
-          ),
-          ListTile(
-            title: const Text('내 정보'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => const MyInfoScreen(),
               ),
             ),
-          ),
-          ListTile(
-            title: const Text('달력'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => const CalendarScreen(),
-              ),
-            ),
-          ),
-          ListTile(
-            title: const Text('좋아요 한 문장'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => const LikedSentencesScreen(),
-              ),
-            ),
-          ),
-          ListTile(
-            title: const Text('내가 쓴 메모'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => const MyMemosScreen(),
-              ),
-            ),
-          ),
-          if (_userProfile?.role == UserRole.admin) ...[
-            ListTile(
-              title: const Text('문장 등록'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (context) => const AddSentenceScreen(),
-                ),
-              ),
-            ),
-            ListTile(
-              title: const Text('문장 자동 생성'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (context) => const AutoCreateSentenceScreen(),
-                ),
-              ),
-            ),
-            ListTile(
-              title: const Text('월별 문장 관리'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => const AdminQuotesScreen(),
-                ),
+
+            // 액션 버튼
+            _Fade(
+              visible: _active,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 40),
+                child: _buildActions(colors),
               ),
             ),
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActions(AppColorTokens colors) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // 좋아요
+        _ActionButton(
+          icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+          color: _isLiked ? colors.accent : colors.textSecondary,
+          tooltip: '좋아요',
+          onTap: _active ? _toggleLike : null,
+        ),
+        const SizedBox(width: 8),
+        // 메모
+        _ActionButton(
+          icon: _currentMemo != null ? Icons.edit : Icons.edit_outlined,
+          color: _currentMemo != null ? colors.accent : colors.textSecondary,
+          tooltip: '메모',
+          onTap: _active ? _openMemoSheet : null,
+        ),
+        const SizedBox(width: 8),
+        // 저장
+        _ActionButton(
+          icon: Icons.download_outlined,
+          color: colors.textSecondary,
+          tooltip: '저장',
+          onTap: _active && _quote != null
+              ? () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => SaveEditScreen(quote: _quote!),
+                    ),
+                  )
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTopLeft(BuildContext context, AppColorTokens colors) {
+    return _Fade(
+      visible: _active,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 4, top: 4),
+            child: IconButton(
+              icon: Icon(Icons.menu, size: 24, color: colors.textPrimary),
+              onPressed: _active ? () => _scaffoldKey.currentState?.openDrawer() : null,
+              tooltip: '메뉴',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopRight(BuildContext context, AppColorTokens colors) {
+    return _Fade(
+      visible: _active,
+      child: Align(
+        alignment: Alignment.topRight,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4, top: 4),
+            child: IconButton(
+              icon: Icon(Icons.camera_alt_outlined, size: 24, color: colors.textPrimary),
+              onPressed: _active
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => CameraScreen(
+                            overlayText: _quote?.sentence ?? '',
+                          ),
+                        ),
+                      )
+                  : null,
+              tooltip: '카메라',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context, AppColorTokens colors) {
+    return Drawer(
+      backgroundColor: colors.background,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back, color: colors.textPrimary),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.settings_outlined, color: colors.textPrimary),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(builder: (_) => const AppOptionsScreen()),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _DrawerItem(
+                    label: '내 정보',
+                    colors: colors,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(builder: (_) => const MyInfoScreen()),
+                    ),
+                  ),
+                  _DrawerItem(
+                    label: '달력',
+                    colors: colors,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(builder: (_) => const CalendarScreen()),
+                    ),
+                  ),
+                  _DrawerItem(
+                    label: '좋아요 한 문장',
+                    colors: colors,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(builder: (_) => const LikedSentencesScreen()),
+                    ),
+                  ),
+                  _DrawerItem(
+                    label: '내가 쓴 메모',
+                    colors: colors,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(builder: (_) => const MyMemosScreen()),
+                    ),
+                  ),
+                  if (_userProfile?.role == UserRole.admin) ...[
+                    _DrawerItem(
+                      label: '문장 등록',
+                      colors: colors,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const AddSentenceScreen()),
+                      ),
+                    ),
+                    _DrawerItem(
+                      label: '문장 자동 생성',
+                      colors: colors,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const AutoCreateSentenceScreen()),
+                      ),
+                    ),
+                    _DrawerItem(
+                      label: '월별 문장 관리',
+                      colors: colors,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const AdminQuotesScreen()),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 재사용 위젯 ───────────────────────────────────────────────
+
+/// opacity fade-in/out 래퍼
+class _Fade extends StatelessWidget {
+  const _Fade({required this.visible, required this.child});
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: visible ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeInOut,
+      child: IgnorePointer(ignoring: !visible, child: child),
+    );
+  }
+}
+
+/// 액션 아이콘 버튼 (44×44 최소 히트 영역, scale on press)
+class _ActionButton extends StatefulWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: widget.onTap != null ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: Tooltip(
+        message: widget.tooltip,
+        child: AnimatedScale(
+          scale: _pressed ? 0.96 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Icon(widget.icon, size: 22, color: widget.color),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 드로어 메뉴 항목 (선 없는 미니멀 스타일)
+class _DrawerItem extends StatelessWidget {
+  const _DrawerItem({
+    required this.label,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final String label;
+  final AppColorTokens colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Text(
+          label,
+          style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+        ),
       ),
     );
   }

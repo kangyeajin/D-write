@@ -1,7 +1,7 @@
 import 'package:d_write/core/models/user_model.dart';
 import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/repositories/user_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,7 +27,6 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
   int _likeCount = 0;
   int _memoCount = 0;
 
-  // 수정 상태
   late TextEditingController _nicknameCtrl;
   String _editGender = 'private';
   int? _editBirthYear;
@@ -281,13 +280,18 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
   // ── 빌드 ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: colors.background,
         elevation: 0,
-        title: const Text('내 정보'),
-        foregroundColor: AppColors.onBackgroundLight,
+        title: Text(
+          '내 정보',
+          style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary),
+        ),
+        foregroundColor: colors.textPrimary,
         actions: [
           if (!_isLoading && _profile != null)
             _isEditing
@@ -295,7 +299,11 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
                     children: [
                       TextButton(
                         onPressed: _isSaving ? null : _cancelEdit,
-                        child: const Text('취소'),
+                        child: Text(
+                          '취소',
+                          style: AppTextStyles.button
+                              .copyWith(color: colors.textSecondary),
+                        ),
                       ),
                       TextButton(
                         onPressed: _isSaving ? null : _saveEdit,
@@ -306,16 +314,23 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2),
                               )
-                            : const Text(
+                            : Text(
                                 '완료',
-                                style: TextStyle(fontWeight: FontWeight.w700),
+                                style: AppTextStyles.button.copyWith(
+                                  color: colors.accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                       ),
                     ],
                   )
                 : TextButton(
                     onPressed: _startEdit,
-                    child: const Text('수정'),
+                    child: Text(
+                      '수정',
+                      style: AppTextStyles.button
+                          .copyWith(color: colors.textSecondary),
+                    ),
                   ),
         ],
       ),
@@ -325,18 +340,18 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildProfileHeader(),
-                  _buildStatRow(),
-                  const Divider(height: 1, color: AppColors.dividerLight),
+                  _buildProfileHeader(colors),
+                  _buildStatRow(colors),
+                  Divider(height: 1, color: colors.divider),
                   const SizedBox(height: 8),
-                  _buildInfoSection(),
+                  _buildInfoSection(colors),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(AppColorTokens colors) {
     final nickname = _profile?.nickname ?? '사용자';
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -344,13 +359,14 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
         children: [
           CircleAvatar(
             radius: 32,
-            backgroundColor: AppColors.surfaceLight,
+            backgroundColor: colors.surface,
             child: Text(
               nickname.isNotEmpty ? nickname[0].toUpperCase() : '?',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: AppColors.onBackgroundLight,
+                fontFamily: 'Pretendard',
+                color: colors.textPrimary,
               ),
             ),
           ),
@@ -361,10 +377,17 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
               Text(
                 nickname,
                 style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w700, fontSize: 20),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20,
+                  color: colors.textPrimary,
+                ),
               ),
               const SizedBox(height: 4),
-              Text(_profile?.email ?? '', style: AppTextStyles.bodySmall),
+              Text(
+                _profile?.email ?? '',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: colors.textSecondary),
+              ),
             ],
           ),
         ],
@@ -372,30 +395,32 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
     );
   }
 
-  Widget _buildStatRow() {
+  Widget _buildStatRow(AppColorTokens colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       child: Row(
         children: [
           Expanded(
             child: _StatCard(
-                icon: Icons.thumb_up_alt_outlined,
-                value: '$_likeCount',
-                label: '좋아요'),
+              icon: Icons.favorite_border,
+              value: '$_likeCount',
+              label: '좋아요',
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: _StatCard(
-                icon: Icons.note_alt_outlined,
-                value: '$_memoCount',
-                label: '메모'),
+              icon: Icons.edit_outlined,
+              value: '$_memoCount',
+              label: '메모',
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoSection() {
+  Widget _buildInfoSection(AppColorTokens colors) {
     final p = _profile!;
     return Column(
       children: [
@@ -408,23 +433,36 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
                   child: TextField(
                     controller: _nicknameCtrl,
                     textAlign: TextAlign.right,
-                    style: AppTextStyles.body,
-                    decoration: const InputDecoration(
+                    style: AppTextStyles.body
+                        .copyWith(color: colors.textPrimary),
+                    decoration: InputDecoration(
                       isDense: true,
-                      border: UnderlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      border: const UnderlineInputBorder(),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 4),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: colors.divider),
+                      ),
                     ),
                   ),
                 )
-              : Text(p.nickname, style: AppTextStyles.body),
+              : Text(
+                  p.nickname,
+                  style: AppTextStyles.body
+                      .copyWith(color: colors.textPrimary),
+                ),
         ),
-        _Divider(),
+        _RowDivider(),
         // 아이디
         _InfoRow(
           label: '아이디',
-          child: Text(p.email, style: AppTextStyles.bodySmall),
+          child: Text(
+            p.email,
+            style: AppTextStyles.bodySmall
+                .copyWith(color: colors.textSecondary),
+          ),
         ),
-        _Divider(),
+        _RowDivider(),
         // 성별
         _InfoRow(
           label: '성별',
@@ -433,9 +471,13 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
                   value: _editGender,
                   onChanged: (v) => setState(() => _editGender = v),
                 )
-              : Text(_genderLabel(p.gender), style: AppTextStyles.body),
+              : Text(
+                  _genderLabel(p.gender),
+                  style: AppTextStyles.body
+                      .copyWith(color: colors.textPrimary),
+                ),
         ),
-        _Divider(),
+        _RowDivider(),
         // 생일
         _InfoRow(
           label: '생일',
@@ -445,38 +487,55 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_editBirthdayLabel, style: AppTextStyles.body),
+                      Text(
+                        _editBirthdayLabel,
+                        style: AppTextStyles.body
+                            .copyWith(color: colors.textPrimary),
+                      ),
                       const SizedBox(width: 6),
-                      const Icon(Icons.calendar_today_outlined,
-                          size: 15, color: AppColors.subtitleLight),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 15,
+                        color: colors.textSecondary,
+                      ),
                     ],
                   ),
                 )
-              : Text(_birthdayLabel, style: AppTextStyles.body),
+              : Text(
+                  _birthdayLabel,
+                  style: AppTextStyles.body
+                      .copyWith(color: colors.textPrimary),
+                ),
         ),
-        _Divider(),
+        _RowDivider(),
         // 비밀번호 변경
         InkWell(
           onTap: _showPasswordDialog,
-          child: const _InfoRow(
+          child: _InfoRow(
             label: '비밀번호 변경',
-            child: Icon(Icons.chevron_right,
-                size: 20, color: AppColors.subtitleLight),
+            child: Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: colors.textSecondary,
+            ),
           ),
         ),
-        _Divider(),
+        _RowDivider(),
         // 연동된 계정
         _InfoRow(
           label: '연동된 계정',
-          child: Text(_providerLabel, style: AppTextStyles.body),
+          child: Text(
+            _providerLabel,
+            style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+          ),
         ),
         const SizedBox(height: 40),
         Center(
           child: TextButton(
             onPressed: _logout,
-            child: const Text(
+            child: Text(
               '로그아웃',
-              style: TextStyle(color: AppColors.error, fontSize: 14),
+              style: AppTextStyles.button.copyWith(color: colors.error),
             ),
           ),
         ),
@@ -505,21 +564,32 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Icon(icon, size: 24, color: AppColors.onSurfaceLight),
+          Icon(icon, size: 24, color: colors.textSecondary),
           const SizedBox(height: 6),
-          Text(value,
-              style: AppTextStyles.body
-                  .copyWith(fontSize: 24, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: AppTextStyles.body.copyWith(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: AppTextStyles.bodySmall),
+          Text(
+            label,
+            style: AppTextStyles.bodySmall
+                .copyWith(color: colors.textSecondary),
+          ),
         ],
       ),
     );
@@ -534,13 +604,18 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         children: [
           SizedBox(
             width: 110,
-            child: Text(label, style: AppTextStyles.bodySmall),
+            child: Text(
+              label,
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: colors.textSecondary),
+            ),
           ),
           Expanded(
             child: Align(alignment: Alignment.centerRight, child: child),
@@ -551,11 +626,16 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _Divider extends StatelessWidget {
+class _RowDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(
-        height: 1, indent: 24, endIndent: 24, color: AppColors.dividerLight);
+    final colors = AppColorTokens.of(context);
+    return Divider(
+      height: 1,
+      indent: 24,
+      endIndent: 24,
+      color: colors.divider,
+    );
   }
 }
 
@@ -570,35 +650,36 @@ class _GenderSelector extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _chip('남성', 'male'),
+        _chip(context, '남성', 'male'),
         const SizedBox(width: 8),
-        _chip('여성', 'female'),
+        _chip(context, '여성', 'female'),
         const SizedBox(width: 8),
-        _chip('비공개', 'private'),
+        _chip(context, '비공개', 'private'),
       ],
     );
   }
 
-  Widget _chip(String label, String val) {
+  Widget _chip(BuildContext context, String label, String val) {
+    final colors = AppColorTokens.of(context);
     final selected = value == val;
     return GestureDetector(
       onTap: () => onChanged(val),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surfaceLight,
+          color: selected ? colors.accent : colors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.dividerLight,
+            color: selected ? colors.accent : colors.divider,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
+            fontFamily: 'Pretendard',
             fontSize: 13,
-            color: selected ? Colors.white : AppColors.onSurfaceLight,
-            fontWeight:
-                selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? Colors.white : colors.textPrimary,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ),
