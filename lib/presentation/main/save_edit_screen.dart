@@ -925,6 +925,7 @@ class _AddPhotoButton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           border: Border.all(color: colors.divider, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
           Icons.add_photo_alternate_outlined,
@@ -962,6 +963,7 @@ class _PaletteThumb extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [option.begin, option.end],
           ),
+          borderRadius: BorderRadius.circular(10),
           border: isSelected
               ? Border.all(color: colors.accent, width: 2.5)
               : Border.all(color: Colors.transparent, width: 2.5),
@@ -1012,11 +1014,15 @@ class _CustomPhotoThumb extends StatelessWidget {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
           border: isSelected
               ? Border.all(color: colors.accent, width: 2.5)
               : null,
         ),
-        child: Image.file(file, fit: BoxFit.cover),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(isSelected ? 7.5 : 10),
+          child: Image.file(file, fit: BoxFit.cover),
+        ),
       ),
     );
   }
