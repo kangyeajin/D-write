@@ -363,13 +363,11 @@ class _MainScreenState extends State<MainScreen> {
             padding: const EdgeInsets.only(right: 4, top: 4),
             child: IconButton(
               icon: Icon(Icons.camera_alt_outlined, size: 24, color: colors.textPrimary),
-              onPressed: _active
+              onPressed: _active && _quote != null
                   ? () => Navigator.push(
                         context,
                         MaterialPageRoute<void>(
-                          builder: (_) => CameraScreen(
-                            overlayText: _quote?.sentence ?? '',
-                          ),
+                          builder: (_) => CameraScreen(quote: _quote!),
                         ),
                       )
                   : null,

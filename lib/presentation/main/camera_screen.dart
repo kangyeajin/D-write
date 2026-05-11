@@ -1,140 +1,215 @@
-import 'dart:io';
 import 'package:camera/camera.dart';
-import 'package:d_write/core/theme/app_colors.dart';
+import 'package:d_write/core/models/quote_model.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:gallery_saver_plus/gallery_saver.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:image/image.dart' as img;
-import 'package:logger/logger.dart';
 
-Logger logger = Logger();
+// ── 비율 열거형 ──────────────────────────────────────────────────────────────
+
+enum _CameraRatio {
+  square,
+  fourThree,
+  nineToSixteen;
+
+  double get aspectRatio => switch (this) {
+        _CameraRatio.square => 1.0,
+        _CameraRatio.fourThree => 4.0 / 3.0,
+        _CameraRatio.nineToSixteen => 9.0 / 16.0,
+      };
+
+  String get label => switch (this) {
+        _CameraRatio.square => '1:1',
+        _CameraRatio.fourThree => '4:3',
+        _CameraRatio.nineToSixteen => '9:16',
+      };
+}
+
+// ── 뷰파인더 화면 ────────────────────────────────────────────────────────────
 
 class CameraScreen extends StatefulWidget {
-  final String overlayText;
+  const CameraScreen({super.key, required this.quote});
 
-  const CameraScreen({super.key, required this.overlayText});
+  final Quote quote;
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  late CameraController _controller;
-  late Future<void> _initializeControllerFuture;
-  late CameraDescription _camera;
+  CameraController? _controller;
+  bool _isInitialized = false;
+
+  CameraLensDirection _lensDirection = CameraLensDirection.back;
+  FlashMode _flashMode = FlashMode.auto;
+  _CameraRatio _ratio = _CameraRatio.fourThree;
+
+  double _zoom = 1.0;
+  double _minZoom = 1.0;
+  double _maxZoom = 1.0;
+  double _baseScaleOnPinch = 1.0;
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    _initCamera();
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _initCamera() async {
     final cameras = await availableCameras();
-    _camera = cameras.first;
-    _controller = CameraController(
-      _camera,
-      ResolutionPreset.high,
-    );
-    _initializeControllerFuture = _controller.initialize();
-    if (mounted) {
-      setState(() {});
+    if (cameras.isEmpty) {
+      debugPrint('[CAM] 사용 가능한 카메라 없음');
+      return;
     }
+    final cam = cameras.firstWhere(
+      (c) => c.lensDirection == _lensDirection,
+      orElse: () => cameras.first,
+    );
+    final ctrl = CameraController(cam, ResolutionPreset.high, enableAudio: false);
+    await ctrl.initialize();
+    final minZoom = await ctrl.getMinZoomLevel();
+    final maxZoom = await ctrl.getMaxZoomLevel();
+    if (!mounted) {
+      ctrl.dispose();
+      return;
+    }
+    setState(() {
+      _controller = ctrl;
+      _zoom = 1.0;
+      _minZoom = minZoom;
+      _maxZoom = maxZoom;
+      _isInitialized = true;
+    });
+    debugPrint('[CAM] 초기화 완료 — lens=${cam.lensDirection.name}, maxZoom=$maxZoom');
+  }
+
+  Future<void> _flipCamera() async {
+    setState(() => _isInitialized = false);
+    await _controller?.dispose();
+    _controller = null;
+    _lensDirection = _lensDirection == CameraLensDirection.back
+        ? CameraLensDirection.front
+        : CameraLensDirection.back;
+    debugPrint('[CAM] lensDirection=${_lensDirection.name} → 재초기화');
+    await _initCamera();
+  }
+
+  Future<void> _cycleFlash() async {
+    final next = switch (_flashMode) {
+      FlashMode.auto => FlashMode.always,
+      FlashMode.always => FlashMode.off,
+      _ => FlashMode.auto,
+    };
+    try {
+      await _controller?.setFlashMode(next);
+    } catch (_) {
+      // 전면 카메라 등 플래시 미지원 시 무시
+    }
+    setState(() => _flashMode = next);
+    debugPrint('[CAM] flashMode=${next.name}');
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
-  }
-
-  Future<void> _takePicture() async {
-    try {
-      await _initializeControllerFuture;
-
-      final XFile imageFile = await _controller.takePicture();
-
-      // Decode the image
-      final imageBytes = await imageFile.readAsBytes();
-      final img.Image originalImage = img.decodeImage(imageBytes)!;
-
-      // Load the font
-      final fontData = await rootBundle.load('assets/fonts/NotoSansKR-Regular.zip');
-      final font = img.BitmapFont.fromZip(fontData.buffer.asUint8List());
-
-      // Add text overlay
-      img.drawString(
-        originalImage,
-        widget.overlayText,
-        font: font,
-        x: (originalImage.width / 2).round() - (widget.overlayText.length * 24 / 2).round(),
-        y: (originalImage.height / 2).round() - 24,
-        color: img.ColorRgb8(255, 255, 255),
-      );
-
-      // Save the modified image to a temporary file
-      final Directory tempDir = await getTemporaryDirectory();
-      final String tempPath = tempDir.path;
-      final String filePath = '$tempPath/${DateTime.now()}.jpg';
-      final File newImage = File(filePath);
-      await newImage.writeAsBytes(img.encodeJpg(originalImage));
-
-      // Save the image to the gallery
-      await GallerySaver.saveImage(filePath);
-
-      logger.i('이미지가 갤러리에 저장되었습니다: $filePath');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('사진이 갤러리에 저장되었습니다.')),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      debugPrint('CameraScreen save error: $e');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                CameraPreview(_controller),
-                Center(
-                  child: Text(
-                    widget.overlayText,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.backgroundLight,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 30,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: FloatingActionButton(
-                      onPressed: _takePicture,
-                      child: const Icon(Icons.camera),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          } else {
-            return const Center(child: CircularProgressIndicator());
-          }
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onScaleStart: (_) => _baseScaleOnPinch = _zoom,
+        onScaleUpdate: (details) async {
+          if (!_isInitialized || _controller == null) return;
+          final newZoom =
+              (_baseScaleOnPinch * details.scale).clamp(_minZoom, _maxZoom);
+          await _controller!.setZoomLevel(newZoom);
+          setState(() => _zoom = newZoom);
         },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 카메라 프리뷰 (비율 크롭)
+            if (_isInitialized && _controller != null)
+              Center(
+                child: AspectRatio(
+                  aspectRatio: _ratio.aspectRatio,
+                  child: CameraPreview(_controller!),
+                ),
+              )
+            else
+              const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+
+            // 오버레이 텍스트 — 터치 투과
+            IgnorePointer(
+              child: Center(
+                child: _OverlayText(quote: widget.quote),
+              ),
+            ),
+
+            // 닫기 버튼 (상단 좌측)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+            ),
+
+            // 하단 컨트롤 바 — Module 2에서 구현
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 오버레이 텍스트 ──────────────────────────────────────────────────────────
+
+class _OverlayText extends StatelessWidget {
+  const _OverlayText({required this.quote});
+
+  final Quote quote;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            quote.sentence,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              height: 1.6,
+              shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '— ${quote.author}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w300,
+              height: 1.5,
+              shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+            ),
+          ),
+        ],
       ),
     );
   }
