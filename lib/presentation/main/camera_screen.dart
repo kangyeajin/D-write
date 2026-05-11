@@ -19,13 +19,13 @@ enum _CameraRatio {
 
   double get aspectRatio => switch (this) {
         _CameraRatio.square => 1.0,
-        _CameraRatio.fourThree => 4.0 / 3.0,
+        _CameraRatio.fourThree => 3.0 / 4.0,
         _CameraRatio.nineToSixteen => 9.0 / 16.0,
       };
 
   String get label => switch (this) {
         _CameraRatio.square => '1:1',
-        _CameraRatio.fourThree => '4:3',
+        _CameraRatio.fourThree => '3:4',
         _CameraRatio.nineToSixteen => '9:16',
       };
 }
@@ -158,7 +158,17 @@ class _CameraScreenState extends State<CameraScreen> {
               Center(
                 child: AspectRatio(
                   aspectRatio: _ratio.aspectRatio,
-                  child: CameraPreview(_controller!),
+                  child: ClipRect(
+                    child: OverflowBox(
+                      alignment: Alignment.center,
+                      maxWidth: double.infinity,
+                      maxHeight: double.infinity,
+                      child: AspectRatio(
+                        aspectRatio: _controller!.value.aspectRatio,
+                        child: CameraPreview(_controller!),
+                      ),
+                    ),
+                  ),
                 ),
               )
             else
