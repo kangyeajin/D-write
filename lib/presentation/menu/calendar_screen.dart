@@ -1,3 +1,5 @@
+import 'dart:math' show min;
+
 import 'package:d_write/core/models/like_model.dart';
 import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
@@ -19,7 +21,8 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen>
+    with SingleTickerProviderStateMixin {
   final _likeService = LikeService();
   final _memoService = MemoService();
   final _quoteService = QuoteService();
@@ -36,13 +39,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late int _month;
   String? _selectedDate;
 
+  late AnimationController _staggerController;
+
   @override
   void initState() {
     super.initState();
+    _staggerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     final now = DateTime.now();
     _year = now.year;
     _month = now.month;
     _load();
+  }
+
+  @override
+  void dispose() {
+    _staggerController.dispose();
+    super.dispose();
+  }
+
+  void _triggerStagger() {
+    _staggerController.reset();
+    _staggerController.forward();
   }
 
   Future<void> _load() async {
@@ -77,6 +97,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _memoByDate = {for (final m in memos) if (m.date.isNotEmpty) m.date: m};
       _isLoading = false;
     });
+    _triggerStagger();
 
     await _loadMonthQuotes();
   }
@@ -122,6 +143,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Future<void> _selectDate(String dateStr) async {
     if (_selectedDate == dateStr) {
       setState(() => _selectedDate = null);
+      _triggerStagger();
       return;
     }
     setState(() => _selectedDate = dateStr);
@@ -143,6 +165,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _month--;
       }
     });
+    _triggerStagger();
     _loadMonthQuotes();
   }
 
@@ -156,6 +179,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _month++;
       }
     });
+    _triggerStagger();
     _loadMonthQuotes();
   }
 
@@ -195,8 +219,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             child: Text(
                               '$pickerYear년',
                               style: AppTextStyles.body.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 17,
                                 color: colors.textPrimary,
                               ),
                             ),
@@ -275,6 +299,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             _selectedDate = null;
                           });
                           Navigator.of(ctx).pop();
+                          _triggerStagger();
                           _loadMonthQuotes();
                         },
                         child: const Text(
@@ -309,6 +334,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appBar: AppBar(
         backgroundColor: colors.background,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           '달력',
           style: AppTextStyles.sectionTitle
@@ -322,22 +348,53 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 _buildHeader(colors),
                 _buildDayLabels(colors),
-                Divider(height: 1, color: colors.divider),
                 _buildCalendarGrid(colors),
+                const SizedBox(height: 20),
                 Divider(height: 1, color: colors.divider),
                 Expanded(
-                  child: _selectedDate != null
-                      ? _buildDayDetail(_selectedDate!)
-                      : _buildMonthList(),
+                  child: ColoredBox(
+                    color: colors.surface,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      ),
+                      layoutBuilder: (currentChild, previousChildren) => Stack(
+                        alignment: Alignment.topCenter,
+                        children: [
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      ),
+                      child: _selectedDate != null
+                          ? KeyedSubtree(
+                              key: ValueKey(_selectedDate),
+                              child: _buildDayDetail(_selectedDate!, colors),
+                            )
+                          : KeyedSubtree(
+                              key: const ValueKey('list'),
+                              child: _buildMonthList(colors),
+                            ),
+                    ),
+                  ),
                 ),
               ],
             ),
     );
   }
 
+  // ── 헤더·그리드 (기존 유지) ────────────────────────────────────
+
+  bool get _isAtOrPastCurrentMonth {
+    final now = DateTime.now();
+    return _year > now.year || (_year == now.year && _month >= now.month);
+  }
+
   Widget _buildHeader(AppColorTokens colors) {
+    final nextDisabled = _isAtOrPastCurrentMonth;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -345,30 +402,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
             icon: Icon(Icons.chevron_left, color: colors.textPrimary),
             onPressed: _prevMonth,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           GestureDetector(
             onTap: _showYearMonthPicker,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$_year년 ${_pad(_month)}월',
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 20,
-                    color: colors.textPrimary,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(Icons.arrow_drop_down,
-                    size: 22, color: colors.textSecondary),
-              ],
+            child: Text(
+              '$_year년 ${_pad(_month)}월',
+              style: TextStyle(
+                fontFamily: 'Pretendard',
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.3,
+                color: colors.textPrimary,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           IconButton(
-            icon: Icon(Icons.chevron_right, color: colors.textPrimary),
-            onPressed: _nextMonth,
+            icon: Icon(
+              Icons.chevron_right,
+              color: nextDisabled
+                  ? colors.divider
+                  : colors.textPrimary,
+            ),
+            onPressed: nextDisabled ? null : _nextMonth,
           ),
         ],
       ),
@@ -378,7 +434,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildDayLabels(AppColorTokens colors) {
     const labels = ['일', '월', '화', '수', '목', '금', '토'];
     return Padding(
-      padding: const EdgeInsets.only(left: 8, right: 8, bottom: 6),
+      padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
       child: Row(
         children: labels.asMap().entries.map((e) {
           Color color = colors.textSecondary;
@@ -388,9 +444,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: Center(
               child: Text(
                 e.value,
-                style: AppTextStyles.bodySmall.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                style: TextStyle(
+                  fontFamily: 'Pretendard',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0.5,
                   color: color,
                 ),
               ),
@@ -418,10 +476,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             children: List.generate(7, (col) {
               final day = row * 7 + col - startOffset + 1;
               if (day < 1 || day > daysInMonth) {
-                return SizedBox(width: cellW, height: 52);
+                return SizedBox(width: cellW, height: 48);
               }
-              final dateStr =
-                  '$_year-${_pad(_month)}-${_pad(day)}';
+              final dateStr = '$_year-${_pad(_month)}-${_pad(day)}';
               return _buildDayCell(
                 colors: colors,
                 day: day,
@@ -466,7 +523,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
         nextDateStr != null &&
         _attendanceDates.contains(nextDateStr);
 
-    // 원 스타일
     Color? circleFill;
     Border? circleBorder;
     if (isToday) {
@@ -481,7 +537,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       circleBorder = Border.all(color: colors.accent, width: 1.5);
     }
 
-    // 날짜 텍스트 색
     Color textColor;
     if (isToday) {
       textColor = Colors.white;
@@ -493,7 +548,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       textColor = colors.textPrimary;
     }
 
-    final underlineColor = isToday
+    final barColor = isToday
         ? Colors.white.withValues(alpha: 0.8)
         : colors.textPrimary.withValues(alpha: 0.45);
 
@@ -501,17 +556,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
       onTap: () => _selectDate(dateStr),
       child: SizedBox(
         width: cellW,
-        height: 52,
+        height: 48,
         child: Stack(
           children: [
-            SizedBox(width: cellW, height: 52),
-            // 출석 형광펜 바
+            SizedBox(width: cellW, height: 48),
             if (isAttended)
               Positioned(
-                top: 14,
-                bottom: 14,
-                left: prevAttended ? 0 : cellW / 2 - 16,
-                right: nextAttended ? 0 : cellW / 2 - 16,
+                top: 12,
+                bottom: 12,
+                left: prevAttended ? 0 : cellW / 2 - 15,
+                right: nextAttended ? 0 : cellW / 2 - 15,
                 child: Container(
                   decoration: BoxDecoration(
                     color: colors.accentMuted.withValues(alpha: 0.5),
@@ -526,12 +580,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
               ),
-            // 날짜 원
             Positioned.fill(
               child: Center(
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: circleFill,
@@ -542,15 +595,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     '$day',
                     style: TextStyle(
                       fontFamily: 'Pretendard',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.2,
                       color: textColor,
                     ),
                   ),
                 ),
               ),
             ),
-            // 메모 언더라인
             if (hasMemo)
               Positioned(
                 bottom: 3,
@@ -561,7 +614,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     width: 14,
                     height: 1.5,
                     decoration: BoxDecoration(
-                      color: underlineColor,
+                      color: barColor,
                       borderRadius: BorderRadius.circular(1),
                     ),
                   ),
@@ -573,9 +626,202 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // ── 월 전체 기록 리스트 ────────────────────────────────────────
+  // ── 선택 날짜 상세 — 통합형 인용 카드 ─────────────────────────
 
-  Widget _buildMonthList() {
+  Widget _buildDayDetail(String dateStr, AppColorTokens colors) {
+    final like = _likeByDate[dateStr];
+    final memo = _memoByDate[dateStr];
+    final parts = dateStr.split('-');
+    final displayDate = '${parts[1]}.${parts[2]}';
+
+    if (like == null && memo == null) {
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 32),
+          child: Text(
+            '이 날의 기록이 없습니다.',
+            style: TextStyle(
+              fontFamily: 'Pretendard',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: colors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final quote = _quoteByDate[dateStr];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 날짜 + 전체보기 버튼
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                displayDate,
+                style: TextStyle(
+                  fontFamily: 'Pretendard',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: colors.textSecondary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              _TapScaleButton(
+                onTap: () {
+                  setState(() => _selectedDate = null);
+                  _triggerStagger();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4),
+                  child: Text(
+                    '전체보기',
+                    style: TextStyle(
+                      fontFamily: 'Pretendard',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 통합 카드 — 탭 시 상세 화면으로 이동
+          _TapScaleButton(
+            onTap: () => _navigateToDetail(dateStr),
+            child: Container(
+            decoration: BoxDecoration(
+              color: colors.background,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 인용구 — accent 세로 바 블록
+                if (like != null)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            width: 3,
+                            decoration: BoxDecoration(
+                              color: colors.accent,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  quote?.sentence ?? '불러오는 중...',
+                                  style: TextStyle(
+                                    fontFamily: 'Pretendard',
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.65,
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                                if (quote?.author.isNotEmpty == true) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '— ${quote!.author}',
+                                    style: TextStyle(
+                                      fontFamily: 'Pretendard',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w300,
+                                      color: colors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // 구분선 + 메모 영역
+                if (memo != null) ...[
+                  if (like != null)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: colors.divider,
+                      indent: 16,
+                      endIndent: 16,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.edit_note_outlined,
+                            size: 13,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            memo.content,
+                            style: TextStyle(
+                              fontFamily: 'Pretendard',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              height: 1.5,
+                              color: colors.textPrimary,
+                            ),
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          ), // _TapScaleButton
+        ],
+      ),
+    );
+  }
+
+  // ── 월 전체 기록 목록 — 타임라인 ──────────────────────────────
+
+  Widget _buildMonthList(AppColorTokens colors) {
     final prefix = '$_year-${_pad(_month)}-';
     final activeDates = {
       ..._likeByDate.keys.where((d) => d.startsWith(prefix)),
@@ -584,183 +830,206 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ..sort();
 
     if (activeDates.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           '이번 달 기록이 없습니다.',
-          style: AppTextStyles.bodySmall,
+          style: TextStyle(
+            fontFamily: 'Pretendard',
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: colors.textSecondary,
+          ),
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 16),
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       itemCount: activeDates.length,
-      separatorBuilder: (context, _) {
-        final colors = AppColorTokens.of(context);
-        return Divider(height: 1, color: colors.divider);
+      itemBuilder: (context, i) {
+        final dateStr = activeDates[i];
+        final isLast = i == activeDates.length - 1;
+
+        final start = (i * 0.06).clamp(0.0, 0.9);
+        final end = min(start + 0.25, 1.0);
+        final animation = CurvedAnimation(
+          parent: _staggerController,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        );
+
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.03),
+              end: Offset.zero,
+            ).animate(animation),
+            child: _buildTimelineItem(dateStr, isLast, colors),
+          ),
+        );
       },
-      itemBuilder: (context, i) => _buildRecordItem(context, activeDates[i]),
     );
   }
 
-  Widget _buildRecordItem(BuildContext context, String dateStr) {
-    final colors = AppColorTokens.of(context);
+  Widget _buildTimelineItem(
+      String dateStr, bool isLast, AppColorTokens colors) {
     final like = _likeByDate[dateStr];
     final memo = _memoByDate[dateStr];
     final quote = _quoteByDate[dateStr];
     final parts = dateStr.split('-');
     final displayDate = '${parts[1]}.${parts[2]}';
 
-    return InkWell(
+    return GestureDetector(
       onTap: () => _navigateToDetail(dateStr),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: IntrinsicHeight(
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            // ① 날짜 컬럼 (44dp 고정, tabular-nums)
+            SizedBox(
+              width: 44,
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Text(
                     displayDate,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: colors.textSecondary),
+                    style: TextStyle(
+                      fontFamily: 'Pretendard',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      color: colors.textSecondary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
-                  if (like != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      quote?.sentence ?? '불러오는 중...',
-                      style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colors.textPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (quote?.author.isNotEmpty == true)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          '— ${quote!.author}',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: colors.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  if (memo != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      memo.content,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: colors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
-            if (like != null) ...[
-              const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(top: 22),
-                child: Icon(Icons.favorite,
-                    color: colors.accent, size: 18),
+            const SizedBox(width: 10),
+            // ② 타임라인 레일 (인디케이터 점 + 수직선)
+            Column(
+              children: [
+                const SizedBox(height: 3),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colors.accent,
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 1,
+                      color: colors.divider,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            // ③ 콘텐츠
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (like != null) ...[
+                      Text(
+                        quote?.sentence ?? '불러오는 중...',
+                        style: TextStyle(
+                          fontFamily: 'Pretendard',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          height: 1.65,
+                          color: colors.textPrimary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (quote?.author.isNotEmpty == true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            '— ${quote!.author}',
+                            style: TextStyle(
+                              fontFamily: 'Pretendard',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w300,
+                              color: colors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    if (memo != null) ...[
+                      const SizedBox(height: 8),
+                      Divider(
+                          height: 1, thickness: 1, color: colors.divider),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.edit_note_outlined,
+                              size: 12, color: colors.textSecondary),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              memo.content,
+                              style: TextStyle(
+                                fontFamily: 'Pretendard',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: colors.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  // ── 선택 날짜 상세 ─────────────────────────────────────────────
+// ── 탭 시 scale(0.96) 피드백 버튼 ─────────────────────────────────
 
-  Widget _buildDayDetail(String dateStr) {
-    final colors = AppColorTokens.of(context);
-    final like = _likeByDate[dateStr];
-    final memo = _memoByDate[dateStr];
+class _TapScaleButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final Widget child;
 
-    if (like == null && memo == null) {
-      return Center(
-        child: Text(
-          '기록이 없습니다.',
-          style: AppTextStyles.bodySmall
-              .copyWith(color: colors.textSecondary),
-        ),
-      );
-    }
+  const _TapScaleButton({required this.onTap, required this.child});
 
-    final quote = _quoteByDate[dateStr];
-    final parts = dateStr.split('-');
-    final displayDate = '${parts[1]}.${parts[2]}';
+  @override
+  State<_TapScaleButton> createState() => _TapScaleButtonState();
+}
 
-    return InkWell(
-      onTap: () => _navigateToDetail(dateStr),
-      child: SingleChildScrollView(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    displayDate,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: colors.textSecondary),
-                  ),
-                  if (like != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      quote?.sentence ?? '불러오는 중...',
-                      style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colors.textPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (quote?.author.isNotEmpty == true)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          '— ${quote!.author}',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: colors.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  if (memo != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      memo.content,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: colors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (like != null) ...[
-              const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(top: 22),
-                child: Icon(Icons.favorite,
-                    color: colors.accent, size: 18),
-              ),
-            ],
-          ],
-        ),
+class _TapScaleButtonState extends State<_TapScaleButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        child: widget.child,
       ),
     );
   }
