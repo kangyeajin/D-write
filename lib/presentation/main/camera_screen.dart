@@ -161,12 +161,8 @@ class _CameraScreenState extends State<CameraScreen> {
                   child: ClipRect(
                     child: OverflowBox(
                       alignment: Alignment.center,
-                      maxWidth: double.infinity,
                       maxHeight: double.infinity,
-                      child: AspectRatio(
-                        aspectRatio: _controller!.value.aspectRatio,
-                        child: CameraPreview(_controller!),
-                      ),
+                      child: CameraPreview(_controller!),
                     ),
                   ),
                 ),
