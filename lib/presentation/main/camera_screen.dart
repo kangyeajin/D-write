@@ -188,14 +188,14 @@ class _CameraScreenState extends State<CameraScreen> {
             ),
 
             // 뒤로가기 버튼 (상단 좌측)
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topLeft,
+            Align(
+              alignment: Alignment.topLeft,
+              child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.only(left: 4, top: 4),
                   child: IconButton(
                     icon: const Icon(
-                      Icons.arrow_back_ios_new,
+                      Icons.arrow_back,
                       color: Colors.white,
                       size: 24,
                     ),
@@ -327,158 +327,271 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
     final colors = AppColorTokens.of(context);
     final bytes = _photoBytes;
 
-    const neutralBtn = Color(0xFF2A2A2E);
-    const neutralBtnStyle = TextStyle(
-      fontFamily: 'Pretendard',
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-    );
-    const accentBtnStyle = TextStyle(
-      fontFamily: 'Pretendard',
-      fontSize: 14,
-      fontWeight: FontWeight.w600,
-    );
-
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Column(
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          // 사진 미리보기 + 상단 네비게이션 오버레이
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Center(
-                  child: bytes == null
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : AspectRatio(
-                          aspectRatio: widget.ratio.aspectRatio,
-                          child: RepaintBoundary(
-                            key: _repaintKey,
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                ClipRect(
-                                  child: Image.memory(bytes, fit: BoxFit.cover),
-                                ),
-                                IgnorePointer(
-                                  child: Center(
-                                    child: _OverlayText(quote: widget.quote),
-                                  ),
-                                ),
-                                if (_isSaving)
-                                  Container(
-                                    color: Colors.black45,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                              ],
+          // ── 사진 미리보기 ────────────────────────────────────────
+          Center(
+            child: bytes == null
+                ? const CircularProgressIndicator(color: Colors.white)
+                : AspectRatio(
+                    aspectRatio: widget.ratio.aspectRatio,
+                    child: RepaintBoundary(
+                      key: _repaintKey,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRect(
+                            child: Image.memory(bytes, fit: BoxFit.cover),
+                          ),
+                          IgnorePointer(
+                            child: Center(
+                              child: _OverlayText(quote: widget.quote),
                             ),
                           ),
-                        ),
-                ),
-                // 상단 네비게이션 (← 뒤로 / ✕ 전체 닫기)
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                          onPressed: () => Navigator.pop(context, true),
-                        ),
-                      ],
+                          if (_isSaving)
+                            Container(
+                              color: Colors.black45,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
+          ),
+
+          // ── 하단 그라데이션 + 액션 버튼 ─────────────────────────
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.0, 0.40],
+                  colors: [Colors.transparent, Colors.black],
                 ),
-              ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 24,
+                    right: 24,
+                    bottom: 55,
+                    top: 28,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _PreviewIconBtn(
+                            icon: Icons.refresh_rounded,
+                            label: '다시 찍기',
+                            onPressed: _isSaving
+                                ? null
+                                : () => Navigator.pop(context),
+                          ),
+                          _PreviewSaveBtn(
+                            onPressed: _isSaving ? null : _saveImage,
+                            isSaving: _isSaving,
+                            accentColor: colors.accent,
+                          ),
+                          _PreviewIconBtn(
+                            icon: Icons.share_rounded,
+                            label: '공유하기',
+                            onPressed: _isSaving ? null : _shareImage,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-          // 하단 액션 버튼 — 카메라 셔터와 동일 위치
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                left: 12,
-                right: 12,
-                bottom: 55,
-                top: 24,
+
+          // ── 상단 좌 — 뒤로가기 ──────────────────────────────────
+          Align(
+            alignment: Alignment.topLeft,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4, top: 4),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: neutralBtn,
-                        foregroundColor: Colors.white.withValues(alpha: 0.80),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        textStyle: neutralBtnStyle,
-                      ),
-                      child: const Text('다시 찍기'),
-                    ),
+            ),
+          ),
+
+          // ── 상단 우 — 전체 닫기 ─────────────────────────────────
+          Align(
+            alignment: Alignment.topRight,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4, top: 4),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 24,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _shareImage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: neutralBtn,
-                        foregroundColor: Colors.white.withValues(alpha: 0.80),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        textStyle: neutralBtnStyle,
-                      ),
-                      child: const Text('공유하기'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _saveImage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.accent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        textStyle: accentBtnStyle,
-                      ),
-                      child: const Text('저장'),
-                    ),
-                  ),
-                ],
+                  onPressed: () => Navigator.pop(context, true),
+                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── 미리보기 저장 버튼 (중앙 Primary) ──────────────────────────────────────
+
+class _PreviewSaveBtn extends StatefulWidget {
+  const _PreviewSaveBtn({
+    required this.onPressed,
+    required this.isSaving,
+    required this.accentColor,
+  });
+
+  final VoidCallback? onPressed;
+  final bool isSaving;
+  final Color accentColor;
+
+  @override
+  State<_PreviewSaveBtn> createState() => _PreviewSaveBtnState();
+}
+
+class _PreviewSaveBtnState extends State<_PreviewSaveBtn> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.onPressed != null
+          ? (_) => setState(() => _pressed = true)
+          : null,
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onPressed,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          width: 160,
+          height: 56,
+          decoration: BoxDecoration(
+            color: widget.accentColor,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.30),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: widget.isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    '저장',
+                    style: TextStyle(
+                      fontFamily: 'Pretendard',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 미리보기 아이콘+텍스트 보조 버튼 ────────────────────────────────────────
+
+class _PreviewIconBtn extends StatefulWidget {
+  const _PreviewIconBtn({
+    required this.icon,
+    required this.label,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  State<_PreviewIconBtn> createState() => _PreviewIconBtnState();
+}
+
+class _PreviewIconBtnState extends State<_PreviewIconBtn> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.onPressed != null
+          ? (_) => setState(() => _pressed = true)
+          : null,
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onPressed,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: SizedBox(
+          width: 72,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                color: Colors.white.withValues(alpha: 0.80),
+                size: 28,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Pretendard',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white.withValues(alpha: 0.70),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
