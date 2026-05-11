@@ -1,6 +1,14 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:camera/camera.dart';
 import 'package:d_write/core/models/quote_model.dart';
+import 'package:d_write/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gallery_saver_plus/gallery_saver.dart';
+import 'package:path_provider/path_provider.dart';
 
 // ── 비율 열거형 ──────────────────────────────────────────────────────────────
 
@@ -106,6 +114,23 @@ class _CameraScreenState extends State<CameraScreen> {
     debugPrint('[CAM] flashMode=${next.name}');
   }
 
+  Future<void> _takePicture() async {
+    if (!_isInitialized || _controller == null) return;
+    final xfile = await _controller!.takePicture();
+    debugPrint('[CAM] 사진 촬영 완료 — path=${xfile.path}');
+    if (!mounted) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => _CapturePreviewScreen(
+          xfile: xfile,
+          quote: widget.quote,
+          ratio: _ratio,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -162,9 +187,174 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 하단 컨트롤 바 — Module 2에서 구현
+            // 하단 컨트롤 바
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _ControlBar(
+                flashMode: _flashMode,
+                ratio: _ratio,
+                isReady: _isInitialized,
+                onFlash: _cycleFlash,
+                onRatio: (r) => setState(() => _ratio = r),
+                onShutter: _takePicture,
+                onFlip: _flipCamera,
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── 미리보기 확인 화면 ───────────────────────────────────────────────────────
+
+class _CapturePreviewScreen extends StatefulWidget {
+  const _CapturePreviewScreen({
+    required this.xfile,
+    required this.quote,
+    required this.ratio,
+  });
+
+  final XFile xfile;
+  final Quote quote;
+  final _CameraRatio ratio;
+
+  @override
+  State<_CapturePreviewScreen> createState() => _CapturePreviewScreenState();
+}
+
+class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
+  final GlobalKey _repaintKey = GlobalKey();
+  Uint8List? _photoBytes;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.xfile.readAsBytes().then((bytes) {
+      if (mounted) setState(() => _photoBytes = bytes);
+    });
+  }
+
+  Future<void> _saveImage() async {
+    setState(() => _isSaving = true);
+    try {
+      final boundary = _repaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('RepaintBoundary not found');
+      final img = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('toByteData failed');
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/d_write_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+      final result =
+          await GallerySaver.saveImage(file.path, albumName: 'D-Write');
+      debugPrint('[CAM] 갤러리 저장 완료 — result=$result');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result == true ? '사진이 갤러리에 저장되었습니다.' : '저장에 실패했습니다.',
+          ),
+        ),
+      );
+      if (result == true) Navigator.pop(context);
+    } catch (e) {
+      debugPrint('[ERROR] 갤러리 저장 실패 — $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('저장에 실패했습니다.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final bytes = _photoBytes;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: bytes == null
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : AspectRatio(
+                      aspectRatio: widget.ratio.aspectRatio,
+                      child: RepaintBoundary(
+                        key: _repaintKey,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ClipRect(
+                              child: Image.memory(bytes, fit: BoxFit.cover),
+                            ),
+                            IgnorePointer(
+                              child: Center(
+                                child: _OverlayText(quote: widget.quote),
+                              ),
+                            ),
+                            if (_isSaving)
+                              Container(
+                                color: Colors.black45,
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed:
+                          _isSaving ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white54),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('다시 찍기'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _saveImage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('저장'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -210,6 +400,169 @@ class _OverlayText extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── 하단 컨트롤 바 ───────────────────────────────────────────────────────────
+
+class _ControlBar extends StatelessWidget {
+  const _ControlBar({
+    required this.flashMode,
+    required this.ratio,
+    required this.isReady,
+    required this.onFlash,
+    required this.onRatio,
+    required this.onShutter,
+    required this.onFlip,
+  });
+
+  final FlashMode flashMode;
+  final _CameraRatio ratio;
+  final bool isReady;
+  final VoidCallback onFlash;
+  final ValueChanged<_CameraRatio> onRatio;
+  final VoidCallback onShutter;
+  final VoidCallback onFlip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.50),
+      padding: const EdgeInsets.only(top: 12),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 비율 선택
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: _CameraRatio.values.map((r) {
+                final selected = r == ratio;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: GestureDetector(
+                    onTap: () => onRatio(r),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: selected
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.35),
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        r.label,
+                        style: TextStyle(
+                          fontFamily: 'Pretendard',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: selected
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.50),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            // 플래시 · 셔터 · 전환
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        onPressed: onFlash,
+                        icon: Icon(
+                          _flashIcon(flashMode),
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _ShutterButton(isReady: isReady, onTap: onShutter),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: onFlip,
+                        icon: const Icon(
+                          Icons.flip_camera_ios_outlined,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static IconData _flashIcon(FlashMode mode) => switch (mode) {
+        FlashMode.auto => Icons.flash_auto,
+        FlashMode.always => Icons.flash_on,
+        _ => Icons.flash_off,
+      };
+}
+
+// ── 셔터 버튼 ─────────────────────────────────────────────────────────────────
+
+class _ShutterButton extends StatefulWidget {
+  const _ShutterButton({required this.isReady, required this.onTap});
+
+  final bool isReady;
+  final VoidCallback onTap;
+
+  @override
+  State<_ShutterButton> createState() => _ShutterButtonState();
+}
+
+class _ShutterButtonState extends State<_ShutterButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.isReady ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: widget.isReady ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.isReady ? widget.onTap : null,
+      child: AnimatedScale(
+        scale: _pressed ? 0.92 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          width: 68,
+          height: 68,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+          ),
+          padding: const EdgeInsets.all(5),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.isReady ? Colors.white : Colors.white38,
+            ),
+          ),
+        ),
       ),
     );
   }
