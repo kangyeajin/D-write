@@ -119,7 +119,7 @@ class _AdminQuotesScreenState extends State<AdminQuotesScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: DropdownButtonFormField<int>(
-              value: _selectedMonth,
+              initialValue: _selectedMonth,
               isDense: true,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),

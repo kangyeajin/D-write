@@ -123,7 +123,7 @@ class _AddSentenceScreenState extends State<AddSentenceScreen> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
-                value: _selectedMonth,
+                initialValue: _selectedMonth,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: List.generate(
                   12,
