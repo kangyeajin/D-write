@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:gallery_saver_plus/gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 // ── 비율 열거형 ──────────────────────────────────────────────────────────────
 
@@ -18,16 +19,16 @@ enum _CameraRatio {
   nineToSixteen;
 
   double get aspectRatio => switch (this) {
-        _CameraRatio.square => 1.0,
-        _CameraRatio.fourThree => 3.0 / 4.0,
-        _CameraRatio.nineToSixteen => 9.0 / 16.0,
-      };
+    _CameraRatio.square => 1.0,
+    _CameraRatio.fourThree => 3.0 / 4.0,
+    _CameraRatio.nineToSixteen => 9.0 / 16.0,
+  };
 
   String get label => switch (this) {
-        _CameraRatio.square => '1:1',
-        _CameraRatio.fourThree => '3:4',
-        _CameraRatio.nineToSixteen => '9:16',
-      };
+    _CameraRatio.square => '1:1',
+    _CameraRatio.fourThree => '3:4',
+    _CameraRatio.nineToSixteen => '9:16',
+  };
 }
 
 // ── 뷰파인더 화면 ────────────────────────────────────────────────────────────
@@ -70,7 +71,11 @@ class _CameraScreenState extends State<CameraScreen> {
       (c) => c.lensDirection == _lensDirection,
       orElse: () => cameras.first,
     );
-    final ctrl = CameraController(cam, ResolutionPreset.high, enableAudio: false);
+    final ctrl = CameraController(
+      cam,
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
     await ctrl.initialize();
     final minZoom = await ctrl.getMinZoomLevel();
     final maxZoom = await ctrl.getMaxZoomLevel();
@@ -85,7 +90,9 @@ class _CameraScreenState extends State<CameraScreen> {
       _maxZoom = maxZoom;
       _isInitialized = true;
     });
-    debugPrint('[CAM] 초기화 완료 — lens=${cam.lensDirection.name}, maxZoom=$maxZoom');
+    debugPrint(
+      '[CAM] 초기화 완료 — lens=${cam.lensDirection.name}, maxZoom=$maxZoom',
+    );
   }
 
   Future<void> _flipCamera() async {
@@ -119,9 +126,9 @@ class _CameraScreenState extends State<CameraScreen> {
     final xfile = await _controller!.takePicture();
     debugPrint('[CAM] 사진 촬영 완료 — path=${xfile.path}');
     if (!mounted) return;
-    await Navigator.push<void>(
+    final shouldClose = await Navigator.push<bool>(
       context,
-      MaterialPageRoute<void>(
+      MaterialPageRoute<bool>(
         builder: (_) => _CapturePreviewScreen(
           xfile: xfile,
           quote: widget.quote,
@@ -129,6 +136,7 @@ class _CameraScreenState extends State<CameraScreen> {
         ),
       ),
     );
+    if (shouldClose == true && mounted) Navigator.pop(context);
   }
 
   @override
@@ -145,8 +153,10 @@ class _CameraScreenState extends State<CameraScreen> {
         onScaleStart: (_) => _baseScaleOnPinch = _zoom,
         onScaleUpdate: (details) async {
           if (!_isInitialized || _controller == null) return;
-          final newZoom =
-              (_baseScaleOnPinch * details.scale).clamp(_minZoom, _maxZoom);
+          final newZoom = (_baseScaleOnPinch * details.scale).clamp(
+            _minZoom,
+            _maxZoom,
+          );
           await _controller!.setZoomLevel(newZoom);
           setState(() => _zoom = newZoom);
         },
@@ -174,19 +184,21 @@ class _CameraScreenState extends State<CameraScreen> {
 
             // 오버레이 텍스트 — 터치 투과
             IgnorePointer(
-              child: Center(
-                child: _OverlayText(quote: widget.quote),
-              ),
+              child: Center(child: _OverlayText(quote: widget.quote)),
             ),
 
-            // 닫기 버튼 (상단 좌측)
+            // 뒤로가기 버튼 (상단 좌측)
             SafeArea(
               child: Align(
                 alignment: Alignment.topLeft,
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
@@ -245,11 +257,38 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
     });
   }
 
+  Future<void> _shareImage() async {
+    try {
+      final boundary =
+          _repaintKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final img = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/d_write_share_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+      await Share.shareXFiles([XFile(file.path)]);
+      debugPrint('[CAM] 공유 완료');
+    } catch (e) {
+      debugPrint('[ERROR] 공유 실패 — $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('공유에 실패했습니다.')));
+      }
+    }
+  }
+
   Future<void> _saveImage() async {
     setState(() => _isSaving = true);
     try {
-      final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _repaintKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) throw Exception('RepaintBoundary not found');
       final img = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
@@ -259,24 +298,24 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
         '${dir.path}/d_write_${DateTime.now().millisecondsSinceEpoch}.png',
       );
       await file.writeAsBytes(byteData.buffer.asUint8List());
-      final result =
-          await GallerySaver.saveImage(file.path, albumName: 'D-Write');
+      final result = await GallerySaver.saveImage(
+        file.path,
+        albumName: 'D-Write',
+      );
       debugPrint('[CAM] 갤러리 저장 완료 — result=$result');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            result == true ? '사진이 갤러리에 저장되었습니다.' : '저장에 실패했습니다.',
-          ),
+          content: Text(result == true ? '사진이 갤러리에 저장되었습니다.' : '저장에 실패했습니다.'),
         ),
       );
       if (result == true) Navigator.pop(context);
     } catch (e) {
       debugPrint('[ERROR] 갤러리 저장 실패 — $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('저장에 실패했습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('저장에 실패했습니다.')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -288,70 +327,149 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
     final colors = AppColorTokens.of(context);
     final bytes = _photoBytes;
 
+    const neutralBtn = Color(0xFF2A2A2E);
+    const neutralBtnStyle = TextStyle(
+      fontFamily: 'Pretendard',
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+    );
+    const accentBtnStyle = TextStyle(
+      fontFamily: 'Pretendard',
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+    );
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Column(
         children: [
+          // 사진 미리보기 + 상단 네비게이션 오버레이
           Expanded(
-            child: Center(
-              child: bytes == null
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : AspectRatio(
-                      aspectRatio: widget.ratio.aspectRatio,
-                      child: RepaintBoundary(
-                        key: _repaintKey,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            ClipRect(
-                              child: Image.memory(bytes, fit: BoxFit.cover),
-                            ),
-                            IgnorePointer(
-                              child: Center(
-                                child: _OverlayText(quote: widget.quote),
-                              ),
-                            ),
-                            if (_isSaving)
-                              Container(
-                                color: Colors.black45,
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Center(
+                  child: bytes == null
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : AspectRatio(
+                          aspectRatio: widget.ratio.aspectRatio,
+                          child: RepaintBoundary(
+                            key: _repaintKey,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                ClipRect(
+                                  child: Image.memory(bytes, fit: BoxFit.cover),
+                                ),
+                                IgnorePointer(
+                                  child: Center(
+                                    child: _OverlayText(quote: widget.quote),
                                   ),
                                 ),
-                              ),
-                          ],
+                                if (_isSaving)
+                                  Container(
+                                    color: Colors.black45,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                ),
+                // 상단 네비게이션 (← 뒤로 / ✕ 전체 닫기)
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                          onPressed: () => Navigator.pop(context, true),
+                        ),
+                      ],
                     ),
+                  ),
+                ),
+              ],
             ),
           ),
+          // 하단 액션 버튼 — 카메라 셔터와 동일 위치
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              padding: const EdgeInsets.only(
+                left: 12,
+                right: 12,
+                bottom: 55,
+                top: 24,
+              ),
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed:
-                          _isSaving ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white54),
+                    child: ElevatedButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: neutralBtn,
+                        foregroundColor: Colors.white.withValues(alpha: 0.80),
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        textStyle: neutralBtnStyle,
                       ),
                       child: const Text('다시 찍기'),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _shareImage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: neutralBtn,
+                        foregroundColor: Colors.white.withValues(alpha: 0.80),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        textStyle: neutralBtnStyle,
+                      ),
+                      child: const Text('공유하기'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _isSaving ? null : _saveImage,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: colors.accent,
                         foregroundColor: Colors.white,
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        textStyle: accentBtnStyle,
                       ),
                       child: const Text('저장'),
                     ),
@@ -435,8 +553,7 @@ class _ControlBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.50),
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 10, bottom: 55, left: 12, right: 12),
       child: SafeArea(
         top: false,
         child: Column(
@@ -454,13 +571,11 @@ class _ControlBar extends StatelessWidget {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 160),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        border: Border.all(
-                          color: selected
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.35),
-                        ),
+                        color: Colors.black.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -470,8 +585,8 @@ class _ControlBar extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: selected
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.50),
+                              ? const Color(0xFFFFD83D)
+                              : Colors.white.withValues(alpha: 0.60),
                         ),
                       ),
                     ),
@@ -479,7 +594,7 @@ class _ControlBar extends StatelessWidget {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             // 플래시 · 셔터 · 전환
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -515,7 +630,7 @@ class _ControlBar extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -523,10 +638,10 @@ class _ControlBar extends StatelessWidget {
   }
 
   static IconData _flashIcon(FlashMode mode) => switch (mode) {
-        FlashMode.auto => Icons.flash_auto,
-        FlashMode.always => Icons.flash_on,
-        _ => Icons.flash_off,
-      };
+    FlashMode.auto => Icons.flash_auto,
+    FlashMode.always => Icons.flash_on,
+    _ => Icons.flash_off,
+  };
 }
 
 // ── 셔터 버튼 ─────────────────────────────────────────────────────────────────
