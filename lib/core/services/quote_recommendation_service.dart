@@ -61,6 +61,7 @@ class QuoteRecommendationService {
       seenIds = daily.seenIds;
       await _local.setSeenQuoteIds(seenIds);
       debugPrint('[QUOTE] seenIds 로드 완료 (${seenIds.length}개)');
+      debugPrint('[QUOTE] Firestore dailyData — fsDate=${daily.todayDate}, fsQuoteId=${daily.todayQuoteId}');
 
       // 다른 기기에서 오늘 이미 문장이 배정된 경우 → 동일 문장 반환 (기기 간 일관성)
       final fsQuoteId = daily.todayQuoteId ?? '';
@@ -69,9 +70,12 @@ class QuoteRecommendationService {
         final quote = await _quoteRepo.getQuote(fsQuoteId);
         if (quote != null) {
           await _local.setTodayQuote(fsQuoteId, todayStr);
+          debugPrint('[QUOTE] 로컬 캐시 저장 완료 → 반환 id=$fsQuoteId');
           return quote;
         }
         debugPrint('[QUOTE] Firestore 문장 조회 실패 → 신규 선정 진행');
+      } else {
+        debugPrint('[QUOTE] Firestore 오늘 문장 없음 (fsDate=${daily.todayDate} ≠ today=$todayStr) → 신규 선정');
       }
     } else {
       debugPrint('[QUOTE] seenIds 로컬 캐시 사용 (${seenIds.length}개)');
@@ -102,7 +106,7 @@ class QuoteRecommendationService {
     final needsSlice = updatedIds.length > 1500;
     final sliced = needsSlice ? updatedIds.sublist(500) : null;
 
-    debugPrint('[ATTEND] Firestore 동기화 시작 (fire-and-forget)');
+    debugPrint('[ATTEND] Firestore 동기화 시작 (fire-and-forget) — todayDate=$todayStr, quoteId=${selected.id}');
     _userRepo.recordDailyActivity(
       uid: uid,
       newQuoteId: selected.id,
