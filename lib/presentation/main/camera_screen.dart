@@ -929,44 +929,43 @@ class _ControlBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // 비율 ↔ 텍스트 스타일 행
-            SizedBox(
-              height: 36,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, anim) => FadeTransition(
-                      opacity: anim,
-                      child: child,
-                    ),
-                    child: isTextMenuOpen
-                        ? _TextStyleBar(
-                            key: const ValueKey('style'),
-                            camFont: camFont,
-                            camFontSize: camFontSize,
-                            camTextColor: camTextColor,
-                            camTextAlign: camTextAlign,
-                            onCycleFont: onCycleFont,
-                            onCycleSize: onCycleSize,
-                            onCycleColor: onCycleColor,
-                            onCycleAlign: onCycleAlign,
-                          )
-                        : _RatioBar(
-                            key: const ValueKey('ratio'),
-                            ratio: ratio,
-                            onRatio: onRatio,
-                          ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    child: _AaToggleBtn(
-                      isOpen: isTextMenuOpen,
-                      onTap: onTextMenuToggle,
+            // 좌측 SizedBox(40) = Aa 버튼 너비와 동일 → 비율/스타일 버튼이 화면 정중앙에 정렬됨
+            Row(
+              children: [
+                const SizedBox(width: 40),
+                Expanded(
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, anim) => FadeTransition(
+                        opacity: anim,
+                        child: child,
+                      ),
+                      child: isTextMenuOpen
+                          ? _TextStyleBar(
+                              key: const ValueKey('style'),
+                              camFont: camFont,
+                              camFontSize: camFontSize,
+                              camTextColor: camTextColor,
+                              camTextAlign: camTextAlign,
+                              onCycleFont: onCycleFont,
+                              onCycleSize: onCycleSize,
+                              onCycleColor: onCycleColor,
+                              onCycleAlign: onCycleAlign,
+                            )
+                          : _RatioBar(
+                              key: const ValueKey('ratio'),
+                              ratio: ratio,
+                              onRatio: onRatio,
+                            ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                _AaToggleBtn(
+                  isOpen: isTextMenuOpen,
+                  onTap: onTextMenuToggle,
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             // 플래시 · 셔터 · 전환
