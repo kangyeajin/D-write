@@ -14,6 +14,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:share_plus/share_plus.dart';
 
+// ── 열거형 ───────────────────────────────────────────────────────────────────
+
+enum _TextStyleMenu { none, font, size, color, align }
+
+enum _CameraFontSize { small, medium, large }
+
+enum _CameraFontChoice { gowunBatang, pretendard, pretendardBold }
+
+enum _CameraTextColor { white, black }
+
 // ── 비율 열거형 ──────────────────────────────────────────────────────────────
 
 enum _CameraRatio {
@@ -52,6 +62,13 @@ class _CameraScreenState extends State<CameraScreen> {
   CameraLensDirection _lensDirection = CameraLensDirection.back;
   FlashMode _flashMode = FlashMode.auto;
   _CameraRatio _ratio = _CameraRatio.fourThree;
+
+  // 텍스트 스타일
+  _TextStyleMenu   _menuState    = _TextStyleMenu.none;
+  _CameraFontSize  _camFontSize  = _CameraFontSize.medium;
+  _CameraFontChoice _camFont     = _CameraFontChoice.pretendard;
+  _CameraTextColor _camTextColor = _CameraTextColor.white;
+  TextAlign        _camTextAlign = TextAlign.center;
 
   double _zoom = 1.0;
   double _minZoom = 1.0;
@@ -152,6 +169,10 @@ class _CameraScreenState extends State<CameraScreen> {
           quote: widget.quote,
           ratio: _ratio,
           deviceOrientation: _deviceOrientation,
+          fontSize: _camFontSize,
+          fontChoice: _camFont,
+          textColor: _camTextColor,
+          textAlign: _camTextAlign,
         ),
       ),
     );
@@ -236,9 +257,65 @@ class _CameraScreenState extends State<CameraScreen> {
                             turns: _textTurns(_deviceOrientation),
                             duration: const Duration(milliseconds: 300),
                             curve: Curves.easeInOut,
-                            child: _OverlayText(quote: widget.quote),
+                            child: _OverlayText(
+                              quote: widget.quote,
+                              fontSize: _camFontSize,
+                              fontChoice: _camFont,
+                              textColor: _camTextColor,
+                              textAlign: _camTextAlign,
+                            ),
                           ),
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // 텍스트 스타일 메뉴 (우측 사이드 패널)
+            if (_isInitialized && _controller != null)
+              Align(
+                alignment: Alignment.topCenter,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: topPadding),
+                    child: AspectRatio(
+                      aspectRatio: _ratio.aspectRatio,
+                      child: _TextStyleMenuOverlay(
+                        menuState: _menuState,
+                        fontChoice: _camFont,
+                        fontSize: _camFontSize,
+                        textColor: _camTextColor,
+                        textAlign: _camTextAlign,
+                        onToggle: () => setState(() {
+                          _menuState = _menuState == _TextStyleMenu.none
+                              ? _TextStyleMenu.font
+                              : _TextStyleMenu.none;
+                          debugPrint('[CAM] 텍스트 메뉴 토글 → ${_menuState.name}');
+                        }),
+                        onCategoryTap: (cat) => setState(() {
+                          _menuState = _menuState == cat
+                              ? _TextStyleMenu.none
+                              : cat;
+                          debugPrint('[CAM] 카테고리 선택 → ${_menuState.name}');
+                        }),
+                        onFontChanged: (v) => setState(() {
+                          _camFont = v;
+                          debugPrint('[CAM] 글꼴 변경 → ${v.name}');
+                        }),
+                        onSizeChanged: (v) => setState(() {
+                          _camFontSize = v;
+                          debugPrint('[CAM] 크기 변경 → ${v.name}');
+                        }),
+                        onColorChanged: (v) => setState(() {
+                          _camTextColor = v;
+                          debugPrint('[CAM] 색상 변경 → ${v.name}');
+                        }),
+                        onAlignChanged: (v) => setState(() {
+                          _camTextAlign = v;
+                          debugPrint('[CAM] 정렬 변경 → $v');
+                        }),
                       ),
                     ),
                   ),
@@ -293,12 +370,20 @@ class _CapturePreviewScreen extends StatefulWidget {
     required this.quote,
     required this.ratio,
     required this.deviceOrientation,
+    required this.fontSize,
+    required this.fontChoice,
+    required this.textColor,
+    required this.textAlign,
   });
 
   final XFile xfile;
   final Quote quote;
   final _CameraRatio ratio;
   final DeviceOrientation deviceOrientation;
+  final _CameraFontSize fontSize;
+  final _CameraFontChoice fontChoice;
+  final _CameraTextColor textColor;
+  final TextAlign textAlign;
 
   @override
   State<_CapturePreviewScreen> createState() => _CapturePreviewScreenState();
@@ -386,7 +471,7 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('저장에 실패했습니다.', textAlign: TextAlign.center),
+            content: const Text('저장에 실패했습니다.', textAlign: TextAlign.center),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.only(bottom: 220, left: 24, right: 24),
@@ -442,7 +527,13 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
                             child: Center(
                               child: RotatedBox(
                                 quarterTurns: _textQuarterTurns(widget.deviceOrientation),
-                                child: _OverlayText(quote: widget.quote),
+                                child: _OverlayText(
+                                  quote: widget.quote,
+                                  fontSize: widget.fontSize,
+                                  fontChoice: widget.fontChoice,
+                                  textColor: widget.textColor,
+                                  textAlign: widget.textAlign,
+                                ),
                               ),
                             ),
                           ),
@@ -603,8 +694,8 @@ class _PreviewSaveBtnState extends State<_PreviewSaveBtn> {
               ),
             ],
           ),
-          child: Center(
-            child: const Text(
+          child: const Center(
+            child: Text(
               '저장',
               style: TextStyle(
                 fontFamily: 'Pretendard',
@@ -684,40 +775,97 @@ class _PreviewIconBtnState extends State<_PreviewIconBtn> {
 // ── 오버레이 텍스트 ──────────────────────────────────────────────────────────
 
 class _OverlayText extends StatelessWidget {
-  const _OverlayText({required this.quote});
+  const _OverlayText({
+    required this.quote,
+    required this.fontSize,
+    required this.fontChoice,
+    required this.textColor,
+    required this.textAlign,
+  });
 
   final Quote quote;
+  final _CameraFontSize fontSize;
+  final _CameraFontChoice fontChoice;
+  final _CameraTextColor textColor;
+  final TextAlign textAlign;
+
+  double get _fontSizeDp => switch (fontSize) {
+    _CameraFontSize.small  => 16.0,
+    _CameraFontSize.medium => 20.0,
+    _CameraFontSize.large  => 26.0,
+  };
+
+  Color get _resolvedColor => switch (textColor) {
+    _CameraTextColor.white => Colors.white,
+    _CameraTextColor.black => const Color(0xFF1A1A1E),
+  };
+
+  List<Shadow> get _shadows => textColor == _CameraTextColor.black
+      ? const []
+      : const [Shadow(color: Colors.black54, blurRadius: 8)];
+
+  TextStyle _buildStyle() {
+    final size = _fontSizeDp;
+    final color = _resolvedColor;
+    final shadows = _shadows;
+    return switch (fontChoice) {
+      _CameraFontChoice.gowunBatang => TextStyle(
+          fontFamily: 'GowunBatang',
+          fontSize: size,
+          fontWeight: FontWeight.w400,
+          color: color,
+          height: 1.7,
+          shadows: shadows,
+        ),
+      _CameraFontChoice.pretendard => TextStyle(
+          fontFamily: 'Pretendard',
+          fontSize: size,
+          fontWeight: FontWeight.w600,
+          color: color,
+          height: 1.6,
+          shadows: shadows,
+        ),
+      _CameraFontChoice.pretendardBold => TextStyle(
+          fontFamily: 'Pretendard',
+          fontSize: size,
+          fontWeight: FontWeight.w700,
+          color: color,
+          height: 1.5,
+          shadows: shadows,
+        ),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final color = _resolvedColor;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: switch (textAlign) {
+          TextAlign.left    => CrossAxisAlignment.start,
+          TextAlign.right   => CrossAxisAlignment.end,
+          TextAlign.center  => CrossAxisAlignment.center,
+          _                 => CrossAxisAlignment.stretch,
+        },
         children: [
           Text(
             quote.sentence,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w600,
-              height: 1.6,
-              shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
-            ),
+            textAlign: textAlign,
+            style: _buildStyle(),
           ),
           const SizedBox(height: 12),
           Text(
             '— ${quote.author}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
+            textAlign: textAlign,
+            style: TextStyle(
               fontFamily: 'Pretendard',
+              fontSize: _fontSizeDp * 0.65,
               fontWeight: FontWeight.w300,
+              color: color.withValues(alpha: 0.70),
               height: 1.5,
-              shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+              shadows: _shadows,
             ),
           ),
         ],
@@ -919,3 +1067,538 @@ int _textQuarterTurns(DeviceOrientation o) => switch (o) {
   DeviceOrientation.portraitDown => 2,
   _ => 0,
 };
+
+// ── 텍스트 스타일 메뉴 오버레이 ─────────────────────────────────────────────
+
+class _TextStyleMenuOverlay extends StatelessWidget {
+  const _TextStyleMenuOverlay({
+    required this.menuState,
+    required this.fontChoice,
+    required this.fontSize,
+    required this.textColor,
+    required this.textAlign,
+    required this.onToggle,
+    required this.onCategoryTap,
+    required this.onFontChanged,
+    required this.onSizeChanged,
+    required this.onColorChanged,
+    required this.onAlignChanged,
+  });
+
+  final _TextStyleMenu menuState;
+  final _CameraFontChoice fontChoice;
+  final _CameraFontSize fontSize;
+  final _CameraTextColor textColor;
+  final TextAlign textAlign;
+  final VoidCallback onToggle;
+  final ValueChanged<_TextStyleMenu> onCategoryTap;
+  final ValueChanged<_CameraFontChoice> onFontChanged;
+  final ValueChanged<_CameraFontSize> onSizeChanged;
+  final ValueChanged<_CameraTextColor> onColorChanged;
+  final ValueChanged<TextAlign> onAlignChanged;
+
+  bool get _isOpen => menuState != _TextStyleMenu.none;
+
+  // 카테고리 아이콘 (선택된 정렬에 따라 정렬 아이콘을 동적으로 변경)
+  IconData _alignIcon() => switch (textAlign) {
+    TextAlign.left    => Icons.format_align_left,
+    TextAlign.right   => Icons.format_align_right,
+    TextAlign.center  => Icons.format_align_center,
+    _                 => Icons.format_align_justify,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    const catPanelWidth = 48.0;
+    const itemHeight = 52.0;
+    const categories = [
+      _TextStyleMenu.font,
+      _TextStyleMenu.size,
+      _TextStyleMenu.color,
+      _TextStyleMenu.align,
+    ];
+
+    return Stack(
+      children: [
+        // 토글 버튼
+        Positioned(
+          top: 12,
+          right: 0,
+          child: _MenuToggleBtn(isOpen: _isOpen, onTap: onToggle),
+        ),
+
+        // 카테고리 패널
+        AnimatedSlide(
+          offset: _isOpen ? Offset.zero : const Offset(1.5, 0),
+          duration: const Duration(milliseconds: 200),
+          curve: _isOpen ? Curves.easeOut : Curves.easeIn,
+          child: AnimatedOpacity(
+            opacity: _isOpen ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 180),
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 60),
+                child: _CategoryPanel(
+                  menuState: menuState,
+                  alignIcon: _alignIcon(),
+                  onTap: onCategoryTap,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 세부 옵션 패널 (선택된 카테고리 좌측 fly-out)
+        if (_isOpen && menuState != _TextStyleMenu.none)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            top: 60 + (categories.indexOf(menuState) * itemHeight) + 6,
+            right: catPanelWidth + 6,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              child: _DetailPanel(
+                key: ValueKey(menuState),
+                menuState: menuState,
+                fontChoice: fontChoice,
+                fontSize: fontSize,
+                textColor: textColor,
+                textAlign: textAlign,
+                onFontChanged: onFontChanged,
+                onSizeChanged: onSizeChanged,
+                onColorChanged: onColorChanged,
+                onAlignChanged: onAlignChanged,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── 메뉴 토글 버튼 ────────────────────────────────────────────────────────────
+
+class _MenuToggleBtn extends StatelessWidget {
+  const _MenuToggleBtn({required this.isOpen, required this.onTap});
+
+  final bool isOpen;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.50),
+          borderRadius: const BorderRadius.horizontal(
+            left: Radius.circular(20),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.20),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 160),
+          child: Icon(
+            isOpen ? Icons.close : Icons.text_format,
+            key: ValueKey(isOpen),
+            color: Colors.white,
+            size: isOpen ? 18 : 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 카테고리 패널 ─────────────────────────────────────────────────────────────
+
+class _CategoryPanel extends StatelessWidget {
+  const _CategoryPanel({
+    required this.menuState,
+    required this.alignIcon,
+    required this.onTap,
+  });
+
+  final _TextStyleMenu menuState;
+  final IconData alignIcon;
+  final ValueChanged<_TextStyleMenu> onTap;
+
+  static const _items = [
+    (_TextStyleMenu.font,  Icons.font_download_outlined),
+    (_TextStyleMenu.size,  Icons.format_size),
+    (_TextStyleMenu.color, Icons.palette_outlined),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final allItems = [
+      ..._items,
+      (_TextStyleMenu.align, alignIcon),
+    ];
+
+    return Container(
+      width: 48,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: const BorderRadius.horizontal(
+          left: Radius.circular(12),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < allItems.length; i++) ...[
+            if (i > 0)
+              Container(
+                height: 0.5,
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+            _CatItem(
+              category: allItems[i].$1,
+              icon: allItems[i].$2,
+              isSelected: menuState == allItems[i].$1,
+              onTap: () => onTap(allItems[i].$1),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CatItem extends StatelessWidget {
+  const _CatItem({
+    required this.category,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final _TextStyleMenu category;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 48,
+        height: 52,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.white.withValues(alpha: 0.20)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 20,
+          color: isSelected
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.65),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 세부 옵션 패널 ────────────────────────────────────────────────────────────
+
+class _DetailPanel extends StatelessWidget {
+  const _DetailPanel({
+    super.key,
+    required this.menuState,
+    required this.fontChoice,
+    required this.fontSize,
+    required this.textColor,
+    required this.textAlign,
+    required this.onFontChanged,
+    required this.onSizeChanged,
+    required this.onColorChanged,
+    required this.onAlignChanged,
+  });
+
+  final _TextStyleMenu menuState;
+  final _CameraFontChoice fontChoice;
+  final _CameraFontSize fontSize;
+  final _CameraTextColor textColor;
+  final TextAlign textAlign;
+  final ValueChanged<_CameraFontChoice> onFontChanged;
+  final ValueChanged<_CameraFontSize> onSizeChanged;
+  final ValueChanged<_CameraTextColor> onColorChanged;
+  final ValueChanged<TextAlign> onAlignChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: switch (menuState) {
+        _TextStyleMenu.font  => _FontStrip(selected: fontChoice, onChanged: onFontChanged),
+        _TextStyleMenu.size  => _SizeStrip(selected: fontSize, onChanged: onSizeChanged),
+        _TextStyleMenu.color => _ColorStrip(selected: textColor, onChanged: onColorChanged),
+        _TextStyleMenu.align => _AlignStrip(selected: textAlign, onChanged: onAlignChanged),
+        _TextStyleMenu.none  => const SizedBox.shrink(),
+      },
+    );
+  }
+}
+
+// ── 글꼴 스트립 ───────────────────────────────────────────────────────────────
+
+class _FontStrip extends StatelessWidget {
+  const _FontStrip({required this.selected, required this.onChanged});
+
+  final _CameraFontChoice selected;
+  final ValueChanged<_CameraFontChoice> onChanged;
+
+  static const _opts = [
+    (_CameraFontChoice.gowunBatang,    '가', 'GowunBatang',  FontWeight.w400),
+    (_CameraFontChoice.pretendard,     '가', 'Pretendard',   FontWeight.w400),
+    (_CameraFontChoice.pretendardBold, '가', 'Pretendard',   FontWeight.w700),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: _opts.map((o) {
+        final isSelected = selected == o.$1;
+        return Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: GestureDetector(
+            onTap: () => onChanged(o.$1),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 44,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.90)
+                    : Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                o.$2,
+                style: TextStyle(
+                  fontFamily: o.$3,
+                  fontWeight: o.$4,
+                  fontSize: 17,
+                  color: isSelected ? Colors.black : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── 크기 스트립 ───────────────────────────────────────────────────────────────
+
+class _SizeStrip extends StatelessWidget {
+  const _SizeStrip({required this.selected, required this.onChanged});
+
+  final _CameraFontSize selected;
+  final ValueChanged<_CameraFontSize> onChanged;
+
+  static const _opts = [
+    (_CameraFontSize.small,  '소'),
+    (_CameraFontSize.medium, '중'),
+    (_CameraFontSize.large,  '대'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.white.withValues(alpha: 0.50)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < _opts.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withValues(alpha: 0.50),
+              ),
+            _SizeCell(
+              label: _opts[i].$2,
+              isSelected: selected == _opts[i].$1,
+              isFirst: i == 0,
+              isLast: i == _opts.length - 1,
+              onTap: () => onChanged(_opts[i].$1),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SizeCell extends StatelessWidget {
+  const _SizeCell({
+    required this.label,
+    required this.isSelected,
+    required this.isFirst,
+    required this.isLast,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final bool isFirst;
+  final bool isLast;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        constraints: const BoxConstraints(minWidth: 48),
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white.withValues(alpha: 0.90) : Colors.transparent,
+          borderRadius: BorderRadius.horizontal(
+            left: isFirst ? const Radius.circular(5) : Radius.zero,
+            right: isLast ? const Radius.circular(5) : Radius.zero,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Pretendard',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.black : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 색상 스트립 ───────────────────────────────────────────────────────────────
+
+class _ColorStrip extends StatelessWidget {
+  const _ColorStrip({required this.selected, required this.onChanged});
+
+  final _CameraTextColor selected;
+  final ValueChanged<_CameraTextColor> onChanged;
+
+  static const _opts = [
+    (_CameraTextColor.white, Color(0xFFFFFFFF)),
+    (_CameraTextColor.black, Color(0xFF1A1A1E)),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: _opts.map((o) {
+        final isSelected = selected == o.$1;
+        return Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: GestureDetector(
+            onTap: () => onChanged(o.$1),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: o.$2,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? Colors.white : Colors.transparent,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── 정렬 스트립 ───────────────────────────────────────────────────────────────
+
+class _AlignStrip extends StatelessWidget {
+  const _AlignStrip({required this.selected, required this.onChanged});
+
+  final TextAlign selected;
+  final ValueChanged<TextAlign> onChanged;
+
+  static const _opts = [
+    (TextAlign.left,    Icons.format_align_left),
+    (TextAlign.center,  Icons.format_align_center),
+    (TextAlign.right,   Icons.format_align_right),
+    (TextAlign.justify, Icons.format_align_justify),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: _opts.map((o) {
+        final isSelected = selected == o.$1;
+        return Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: GestureDetector(
+            onTap: () => onChanged(o.$1),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.90)
+                    : Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                o.$2,
+                size: 18,
+                color: isSelected ? Colors.black : Colors.white,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
