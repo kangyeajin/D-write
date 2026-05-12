@@ -1,5 +1,6 @@
 import 'package:d_write/core/models/user_model.dart';
 import 'package:d_write/core/services/like_service.dart';
+import 'package:d_write/core/services/local_data_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
@@ -545,6 +546,7 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
   }
 
   Future<void> _logout() async {
+    await LocalDataService().clear();
     await FirebaseAuth.instance.signOut();
     if (mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
