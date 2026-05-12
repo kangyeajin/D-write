@@ -293,7 +293,7 @@ class _LikedSentenceDetailScreenState
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: screenHeight * 0.25),
+                SizedBox(height: screenHeight * 0.25 - kToolbarHeight),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 40,
