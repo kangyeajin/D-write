@@ -39,6 +39,7 @@ git merge feature/<기능명>   # --no-ff 금지 — 브랜치 커밋이 main에
 | `[ATTEND]` | 출석 체크 및 Firestore 동기화 |
 | `[AUTH]` | 인증 상태 변경 (로그인/로그아웃/회원가입) |
 | `[NAV]` | 화면 이동 |
+| `[MEMO]` | 메모 저장/수정/삭제 흐름 |
 | `[ERROR]` | 예외 및 오류 (기존 catch 블록의 `debugPrint` 대체) |
 
 ### 작성 규칙

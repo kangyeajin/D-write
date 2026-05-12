@@ -20,6 +20,8 @@ import 'package:d_write/presentation/menu/liked_sentences_screen.dart';
 import 'package:d_write/presentation/menu/my_info_screen.dart';
 import 'package:d_write/presentation/menu/my_memos_screen.dart';
 import 'package:d_write/repositories/quote_repository.dart';
+import 'dart:ui';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -34,7 +36,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final QuoteRecommendationService _recommendationService = QuoteRecommendationService();
+  final QuoteRecommendationService _recommendationService =
+      QuoteRecommendationService();
   final QuoteService _quoteService = QuoteService(repo: QuoteRepository());
   final LikeService _likeService = LikeService();
   final MemoService _memoService = MemoService();
@@ -64,7 +67,9 @@ class _MainScreenState extends State<MainScreen> {
     final notifier = context.read<ThemeNotifier>();
     notifier.setTheme(profile.theme);
     notifier.setPaletteById(profile.palette);
-    debugPrint('[AUTH] 프로필 로드 완료 — role=${profile.role.name}, palette=${profile.palette}');
+    debugPrint(
+      '[AUTH] 프로필 로드 완료 — role=${profile.role.name}, palette=${profile.palette}',
+    );
   }
 
   Future<void> _loadQuote() async {
@@ -123,61 +128,186 @@ class _MainScreenState extends State<MainScreen> {
     final controller = TextEditingController(text: _currentMemo?.content ?? '');
     final isEditing = _currentMemo != null;
     final colors = AppColorTokens.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.22),
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(isEditing ? '메모 수정' : '메모 추가'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: 5,
-            minLines: 3,
-            style: AppTextStyles.body.copyWith(color: colors.textPrimary),
-            decoration: InputDecoration(
-              hintText: '이 문장에 대한 생각을 기록해보세요.',
-              border: OutlineInputBorder(
-                borderSide: BorderSide(color: colors.divider),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 40,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.surface.withValues(alpha: isDark ? 0.82 : 0.90),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.55),
+                    width: 1,
+                  ),
+                ),
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // X 닫기 버튼 — 여백 없이 모서리에 붙음
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: colors.textSecondary,
+                        ),
+                        tooltip: '닫기',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                      ),
+                    ),
+                    // 입력창 + 버튼: 좌우 여백 유지
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            controller: controller,
+                            autofocus: true,
+                            maxLines: 5,
+                            minLines: 3,
+                            style: AppTextStyles.body.copyWith(
+                              color: colors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '이 문장에 대한 생각을 기록해보세요.',
+                              hintStyle: AppTextStyles.body.copyWith(
+                                color: colors.textTertiary,
+                              ),
+                              filled: true,
+                              fillColor: colors.background.withValues(
+                                alpha: 0.35,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                                vertical: 20,
+                              ),
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: colors.divider,
+                                  width: 1,
+                                ),
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: colors.divider,
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: colors.accent,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              if (isEditing)
+                                TextButton(
+                                  onPressed: () async {
+                                    Navigator.pop(dialogContext);
+                                    await _deleteMemo();
+                                  },
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: colors.error,
+                                    minimumSize: const Size(44, 44),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: Text(
+                                    '삭제',
+                                    style: AppTextStyles.button.copyWith(
+                                      color: colors.error,
+                                    ),
+                                  ),
+                                ),
+                              const Spacer(),
+                              OutlinedButton(
+                                onPressed: () async {
+                                  final text = controller.text.trim();
+                                  Navigator.pop(dialogContext);
+                                  await _saveMemo(uid, quoteId, text);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: colors.textPrimary,
+                                  side: BorderSide(
+                                    color: colors.textPrimary.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    width: 1,
+                                  ),
+                                  minimumSize: const Size(72, 40),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  '저장',
+                                  style: AppTextStyles.button.copyWith(
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          actions: [
-            if (isEditing)
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(dialogContext);
-                  await _deleteMemo();
-                },
-                child: Text('삭제', style: TextStyle(color: colors.error)),
-              ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final text = controller.text.trim();
-                Navigator.pop(dialogContext);
-                await _saveMemo(uid, quoteId, text);
-              },
-              child: const Text('저장'),
-            ),
-          ],
         );
       },
     );
   }
 
   Future<void> _saveMemo(String uid, String quoteId, String content) async {
+    debugPrint(
+      '[MEMO] 저장 시작 — isEditing=${_currentMemo != null}, length=${content.length}',
+    );
     if (content.isEmpty) {
+      debugPrint('[MEMO] 빈 내용 → ${_currentMemo != null ? '기존 메모 삭제' : '스킵'}');
       if (_currentMemo != null) await _deleteMemo();
+      return;
+    }
+    if (_currentMemo != null && content == _currentMemo!.content) {
+      debugPrint('[MEMO] 내용 미변경 → 업데이트 생략');
       return;
     }
     if (_currentMemo != null) {
       await _memoService.updateMemo(_currentMemo!.id, content);
+      debugPrint('[MEMO] 수정 완료 — id=${_currentMemo!.id}');
     } else {
       await _memoService.saveMemo(uid, quoteId, content);
+      debugPrint('[MEMO] 신규 저장 완료 — quoteId=$quoteId');
     }
     await _loadCurrentMemo(quoteId);
   }
@@ -217,8 +347,11 @@ class _MainScreenState extends State<MainScreen> {
         behavior: HitTestBehavior.opaque,
         onTap: _deactivate,
         onVerticalDragUpdate: (d) {
-          if (d.delta.dy < -5) { _activate(); }
-          else if (d.delta.dy > 5) { _deactivate(); }
+          if (d.delta.dy < -5) {
+            _activate();
+          } else if (d.delta.dy > 5) {
+            _deactivate();
+          }
         },
         child: Stack(
           children: [
@@ -323,11 +456,11 @@ class _MainScreenState extends State<MainScreen> {
           tooltip: '저장',
           onTap: _active && _quote != null
               ? () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => SaveEditScreen(quote: _quote!),
-                    ),
-                  )
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => SaveEditScreen(quote: _quote!),
+                  ),
+                )
               : null,
         ),
       ],
@@ -344,7 +477,9 @@ class _MainScreenState extends State<MainScreen> {
             padding: const EdgeInsets.only(left: 4, top: 4),
             child: IconButton(
               icon: Icon(Icons.menu, size: 24, color: colors.textPrimary),
-              onPressed: _active ? () => _scaffoldKey.currentState?.openDrawer() : null,
+              onPressed: _active
+                  ? () => _scaffoldKey.currentState?.openDrawer()
+                  : null,
               tooltip: '메뉴',
             ),
           ),
@@ -362,14 +497,18 @@ class _MainScreenState extends State<MainScreen> {
           child: Padding(
             padding: const EdgeInsets.only(right: 4, top: 4),
             child: IconButton(
-              icon: Icon(Icons.camera_alt_outlined, size: 24, color: colors.textPrimary),
+              icon: Icon(
+                Icons.camera_alt_outlined,
+                size: 24,
+                color: colors.textPrimary,
+              ),
               onPressed: _active && _quote != null
                   ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => CameraScreen(quote: _quote!),
-                        ),
-                      )
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => CameraScreen(quote: _quote!),
+                      ),
+                    )
                   : null,
               tooltip: '카메라',
             ),
@@ -395,10 +534,15 @@ class _MainScreenState extends State<MainScreen> {
                     onPressed: () => Navigator.pop(context),
                   ),
                   IconButton(
-                    icon: Icon(Icons.settings_outlined, color: colors.textPrimary),
+                    icon: Icon(
+                      Icons.settings_outlined,
+                      color: colors.textPrimary,
+                    ),
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute<void>(builder: (_) => const AppOptionsScreen()),
+                      MaterialPageRoute<void>(
+                        builder: (_) => const AppOptionsScreen(),
+                      ),
                     ),
                   ),
                 ],
@@ -413,7 +557,9 @@ class _MainScreenState extends State<MainScreen> {
                     colors: colors,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute<void>(builder: (_) => const MyInfoScreen()),
+                      MaterialPageRoute<void>(
+                        builder: (_) => const MyInfoScreen(),
+                      ),
                     ),
                   ),
                   _DrawerItem(
@@ -421,7 +567,9 @@ class _MainScreenState extends State<MainScreen> {
                     colors: colors,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute<void>(builder: (_) => const CalendarScreen()),
+                      MaterialPageRoute<void>(
+                        builder: (_) => const CalendarScreen(),
+                      ),
                     ),
                   ),
                   _DrawerItem(
@@ -429,7 +577,9 @@ class _MainScreenState extends State<MainScreen> {
                     colors: colors,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute<void>(builder: (_) => const LikedSentencesScreen()),
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LikedSentencesScreen(),
+                      ),
                     ),
                   ),
                   _DrawerItem(
@@ -437,7 +587,9 @@ class _MainScreenState extends State<MainScreen> {
                     colors: colors,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute<void>(builder: (_) => const MyMemosScreen()),
+                      MaterialPageRoute<void>(
+                        builder: (_) => const MyMemosScreen(),
+                      ),
                     ),
                   ),
                   if (_userProfile?.role == UserRole.admin) ...[
@@ -446,7 +598,9 @@ class _MainScreenState extends State<MainScreen> {
                       colors: colors,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute<void>(builder: (_) => const AddSentenceScreen()),
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AddSentenceScreen(),
+                        ),
                       ),
                     ),
                     _DrawerItem(
@@ -454,7 +608,9 @@ class _MainScreenState extends State<MainScreen> {
                       colors: colors,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute<void>(builder: (_) => const AutoCreateSentenceScreen()),
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AutoCreateSentenceScreen(),
+                        ),
                       ),
                     ),
                     _DrawerItem(
@@ -462,7 +618,9 @@ class _MainScreenState extends State<MainScreen> {
                       colors: colors,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute<void>(builder: (_) => const AdminQuotesScreen()),
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AdminQuotesScreen(),
+                        ),
                       ),
                     ),
                   ],
@@ -520,8 +678,12 @@ class _ActionButtonState extends State<_ActionButton> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: widget.onTap != null ? (_) => setState(() => _pressed = false) : null,
+      onTapDown: widget.onTap != null
+          ? (_) => setState(() => _pressed = true)
+          : null,
+      onTapUp: widget.onTap != null
+          ? (_) => setState(() => _pressed = false)
+          : null,
       onTapCancel: () => setState(() => _pressed = false),
       onTap: widget.onTap,
       child: Tooltip(
