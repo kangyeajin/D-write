@@ -287,19 +287,16 @@ class _LikedSentenceDetailScreenState
         foregroundColor: colors.textPrimary,
       ),
       body: SingleChildScrollView(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: MediaQuery.sizeOf(context).height - kToolbarHeight,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+        child: Builder(
+          builder: (context) {
+            final screenHeight = MediaQuery.sizeOf(context).height;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: screenHeight * 0.25),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 40,
-                      vertical: 40,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -308,6 +305,7 @@ class _LikedSentenceDetailScreenState
                         Text(
                           _dateLabel,
                           style: AppTextStyles.bodySmall.copyWith(
+                            fontSize: 20,
                             color: colors.textSecondary,
                           ),
                         ),
@@ -395,8 +393,8 @@ class _LikedSentenceDetailScreenState
                       ],
                     ),
                   ),
-                ],
-              ),
+                const SizedBox(height: 40),
+              ],
             );
           },
         ),

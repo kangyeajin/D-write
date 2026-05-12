@@ -375,7 +375,7 @@ class _MainScreenState extends State<MainScreen> {
         padding: EdgeInsets.symmetric(horizontal: hPad),
         child: Column(
           children: [
-            SizedBox(height: size.height * 0.18),
+            SizedBox(height: size.height * 0.25),
 
             // 날짜
             _Fade(
@@ -383,6 +383,7 @@ class _MainScreenState extends State<MainScreen> {
               child: Text(
                 _dateLabel,
                 style: AppTextStyles.bodySmall.copyWith(
+                  fontSize: 20,
                   color: colors.textSecondary,
                 ),
               ),
