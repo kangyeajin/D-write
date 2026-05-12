@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -7,8 +8,10 @@ import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart' show DeviceOrientation, SystemChrome;
 import 'package:gallery_saver_plus/gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:share_plus/share_plus.dart';
 
 // ── 비율 열거형 ──────────────────────────────────────────────────────────────
@@ -55,10 +58,25 @@ class _CameraScreenState extends State<CameraScreen> {
   double _maxZoom = 1.0;
   double _baseScaleOnPinch = 1.0;
 
+  DeviceOrientation _deviceOrientation = DeviceOrientation.portraitUp;
+  StreamSubscription<AccelerometerEvent>? _accelerometerSub;
+
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    _startOrientationDetection();
     _initCamera();
+  }
+
+  void _startOrientationDetection() {
+    _accelerometerSub = accelerometerEventStream(
+      samplingPeriod: SensorInterval.normalInterval,
+    ).listen((AccelerometerEvent e) {
+      if (!mounted) return;
+      final o = _orientationFromAccelerometer(e, _deviceOrientation);
+      if (o != _deviceOrientation) setState(() => _deviceOrientation = o);
+    });
   }
 
   Future<void> _initCamera() async {
@@ -133,6 +151,7 @@ class _CameraScreenState extends State<CameraScreen> {
           xfile: xfile,
           quote: widget.quote,
           ratio: _ratio,
+          deviceOrientation: _deviceOrientation,
         ),
       ),
     );
@@ -141,12 +160,23 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   void dispose() {
+    _accelerometerSub?.cancel();
     _controller?.dispose();
+    SystemChrome.setPreferredOrientations([]);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    final topPadding = switch (_ratio) {
+      _CameraRatio.fourThree => screenHeight * 0.08,
+      _CameraRatio.nineToSixteen => screenHeight * 0.074,
+      _CameraRatio.square => screenHeight * 0.08 + screenWidth / 6.0,
+    };
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
@@ -162,17 +192,25 @@ class _CameraScreenState extends State<CameraScreen> {
         },
         child: Stack(
           fit: StackFit.expand,
+          clipBehavior: Clip.none,
           children: [
-            // 카메라 프리뷰 (비율 크롭)
+            // 카메라 프리뷰
             if (_isInitialized && _controller != null)
-              Center(
-                child: AspectRatio(
-                  aspectRatio: _ratio.aspectRatio,
-                  child: ClipRect(
-                    child: OverflowBox(
-                      alignment: Alignment.center,
-                      maxHeight: double.infinity,
-                      child: CameraPreview(_controller!),
+              Align(
+                alignment: Alignment.topCenter,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: topPadding),
+                    child: AspectRatio(
+                      aspectRatio: _ratio.aspectRatio,
+                      child: ClipRect(
+                        child: OverflowBox(
+                          alignment: Alignment.center,
+                          maxHeight: double.infinity,
+                          child: CameraPreview(_controller!),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -182,10 +220,30 @@ class _CameraScreenState extends State<CameraScreen> {
                 child: CircularProgressIndicator(color: Colors.white),
               ),
 
-            // 오버레이 텍스트 — 터치 투과
-            IgnorePointer(
-              child: Center(child: _OverlayText(quote: widget.quote)),
-            ),
+            // 오버레이 텍스트 — 카메라 뷰와 동일한 위치, 클리핑 없이 독립 레이어
+            if (_isInitialized && _controller != null)
+              Align(
+                alignment: Alignment.topCenter,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: topPadding),
+                    child: AspectRatio(
+                      aspectRatio: _ratio.aspectRatio,
+                      child: IgnorePointer(
+                        child: Center(
+                          child: AnimatedRotation(
+                            turns: _textTurns(_deviceOrientation),
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            child: _OverlayText(quote: widget.quote),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // 뒤로가기 버튼 (상단 좌측)
             Align(
@@ -234,11 +292,13 @@ class _CapturePreviewScreen extends StatefulWidget {
     required this.xfile,
     required this.quote,
     required this.ratio,
+    required this.deviceOrientation,
   });
 
   final XFile xfile;
   final Quote quote;
   final _CameraRatio ratio;
+  final DeviceOrientation deviceOrientation;
 
   @override
   State<_CapturePreviewScreen> createState() => _CapturePreviewScreenState();
@@ -284,6 +344,9 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
   }
 
   Future<void> _saveImage() async {
+    final snackBgColor = AppColorTokens.of(
+      context,
+    ).textPrimary.withValues(alpha: 0.85);
     setState(() => _isSaving = true);
     try {
       final boundary =
@@ -306,16 +369,31 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result == true ? '사진이 갤러리에 저장되었습니다.' : '저장에 실패했습니다.'),
+          content: Text(
+            result == true ? '사진이 갤러리에 저장되었습니다.' : '저장에 실패했습니다.',
+            textAlign: TextAlign.center,
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 220, left: 24, right: 24),
+          elevation: 0,
+          backgroundColor: snackBgColor,
         ),
       );
       if (result == true) Navigator.pop(context);
     } catch (e) {
       debugPrint('[ERROR] 갤러리 저장 실패 — $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('저장에 실패했습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('저장에 실패했습니다.', textAlign: TextAlign.center),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 220, left: 24, right: 24),
+            elevation: 0,
+            backgroundColor: snackBgColor,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -326,6 +404,14 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
   Widget build(BuildContext context) {
     final colors = AppColorTokens.of(context);
     final bytes = _photoBytes;
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    final topPadding = switch (widget.ratio) {
+      _CameraRatio.fourThree => screenHeight * 0.08,
+      _CameraRatio.nineToSixteen => screenHeight * 0.074,
+      _CameraRatio.square => screenHeight * 0.08 + screenWidth / 6.0,
+    };
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -333,10 +419,16 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
         fit: StackFit.expand,
         children: [
           // ── 사진 미리보기 ────────────────────────────────────────
-          Center(
-            child: bytes == null
-                ? const CircularProgressIndicator(color: Colors.white)
-                : AspectRatio(
+          if (bytes == null)
+            const Center(child: CircularProgressIndicator(color: Colors.white))
+          else
+            Align(
+              alignment: Alignment.topCenter,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.only(top: topPadding),
+                  child: AspectRatio(
                     aspectRatio: widget.ratio.aspectRatio,
                     child: RepaintBoundary(
                       key: _repaintKey,
@@ -348,7 +440,10 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
                           ),
                           IgnorePointer(
                             child: Center(
-                              child: _OverlayText(quote: widget.quote),
+                              child: RotatedBox(
+                                quarterTurns: _textQuarterTurns(widget.deviceOrientation),
+                                child: _OverlayText(quote: widget.quote),
+                              ),
                             ),
                           ),
                           if (_isSaving)
@@ -364,7 +459,9 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
                       ),
                     ),
                   ),
-          ),
+                ),
+              ),
+            ),
 
           // ── 하단 그라데이션 + 액션 버튼 ─────────────────────────
           Positioned(
@@ -376,7 +473,7 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: [0.0, 0.40],
+                  stops: [0.0, 0.75],
                   colors: [Colors.transparent, Colors.black],
                 ),
               ),
@@ -386,7 +483,7 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
                   padding: const EdgeInsets.only(
                     left: 24,
                     right: 24,
-                    bottom: 55,
+                    bottom: 110,
                     top: 28,
                   ),
                   child: Column(
@@ -448,11 +545,7 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(right: 4, top: 4),
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 24),
                   onPressed: () => Navigator.pop(context, true),
                 ),
               ),
@@ -511,24 +604,15 @@ class _PreviewSaveBtnState extends State<_PreviewSaveBtn> {
             ],
           ),
           child: Center(
-            child: widget.isSaving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Text(
-                    '저장',
-                    style: TextStyle(
-                      fontFamily: 'Pretendard',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+            child: const Text(
+              '저장',
+              style: TextStyle(
+                fontFamily: 'Pretendard',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
       ),
@@ -666,7 +750,7 @@ class _ControlBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: 10, bottom: 55, left: 12, right: 12),
+      padding: const EdgeInsets.only(top: 10, bottom: 60, left: 12, right: 12),
       child: SafeArea(
         top: false,
         child: Column(
@@ -801,3 +885,37 @@ class _ShutterButtonState extends State<_ShutterButton> {
     );
   }
 }
+
+// ── 방향 헬퍼 ─────────────────────────────────────────────────────────────────
+
+/// 가속도계 값으로 물리적 기기 방향 판별.
+/// x > 0 → landscapeRight (기기 top이 왼쪽), x < 0 → landscapeLeft (top이 오른쪽).
+DeviceOrientation _orientationFromAccelerometer(
+  AccelerometerEvent e,
+  DeviceOrientation current,
+) {
+  final absX = e.x.abs();
+  final absY = e.y.abs();
+  const threshold = 5.5;
+  if (absX > absY && absX > threshold) {
+    return e.x > 0 ? DeviceOrientation.landscapeRight : DeviceOrientation.landscapeLeft;
+  }
+  if (absY > absX && absY > threshold) {
+    return e.y > 0 ? DeviceOrientation.portraitUp : DeviceOrientation.portraitDown;
+  }
+  return current;
+}
+
+double _textTurns(DeviceOrientation o) => switch (o) {
+  DeviceOrientation.landscapeLeft => -0.25,
+  DeviceOrientation.landscapeRight => 0.25,
+  DeviceOrientation.portraitDown => 0.5,
+  _ => 0.0,
+};
+
+int _textQuarterTurns(DeviceOrientation o) => switch (o) {
+  DeviceOrientation.landscapeLeft => -1,
+  DeviceOrientation.landscapeRight => 1,
+  DeviceOrientation.portraitDown => 2,
+  _ => 0,
+};
