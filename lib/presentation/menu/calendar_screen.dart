@@ -93,8 +93,14 @@ class _CalendarScreenState extends State<CalendarScreen>
 
     setState(() {
       _attendanceDates = attendanceDates;
-      _likeByDate = {for (final l in likes) if (l.date.isNotEmpty) l.date: l};
-      _memoByDate = {for (final m in memos) if (m.date.isNotEmpty) m.date: m};
+      _likeByDate = {
+        for (final l in likes)
+          if (l.date.isNotEmpty) l.date: l,
+      };
+      _memoByDate = {
+        for (final m in memos)
+          if (m.date.isNotEmpty) m.date: m,
+      };
       _isLoading = false;
     });
     _triggerStagger();
@@ -104,16 +110,27 @@ class _CalendarScreenState extends State<CalendarScreen>
 
   Future<void> _loadMonthQuotes() async {
     final prefix = '$_year-${_pad(_month)}-';
-    final datesToLoad = _likeByDate.keys
-        .where((d) => d.startsWith(prefix) && !_quoteByDate.containsKey(d))
-        .toList();
+
+    final datesToLoad = {
+      ..._likeByDate.keys.where((d) => d.startsWith(prefix)),
+      ..._memoByDate.keys.where(
+        (d) => d.startsWith(prefix) && _memoByDate[d]!.quoteId.isNotEmpty,
+      ),
+    }.where((d) => !_quoteByDate.containsKey(d)).toList();
 
     if (datesToLoad.isEmpty) return;
 
-    await Future.wait(datesToLoad.map((dateStr) async {
-      final quote = await _quoteService.getQuote(_likeByDate[dateStr]!.quoteId);
-      if (mounted) _quoteByDate[dateStr] = quote;
-    }));
+    await Future.wait(
+      datesToLoad.map((dateStr) async {
+        final quoteId =
+            _likeByDate[dateStr]?.quoteId ??
+            _memoByDate[dateStr]?.quoteId ??
+            '';
+        if (quoteId.isEmpty) return;
+        final quote = await _quoteService.getQuote(quoteId);
+        if (mounted) _quoteByDate[dateStr] = quote;
+      }),
+    );
 
     if (mounted) setState(() {});
   }
@@ -149,9 +166,13 @@ class _CalendarScreenState extends State<CalendarScreen>
     setState(() => _selectedDate = dateStr);
 
     final like = _likeByDate[dateStr];
-    if (like != null && !_quoteByDate.containsKey(dateStr)) {
-      final quote = await _quoteService.getQuote(like.quoteId);
-      if (mounted) setState(() => _quoteByDate[dateStr] = quote);
+    final memo = _memoByDate[dateStr];
+    if (!_quoteByDate.containsKey(dateStr)) {
+      final quoteId = like?.quoteId ?? memo?.quoteId ?? '';
+      if (quoteId.isNotEmpty) {
+        final quote = await _quoteService.getQuote(quoteId);
+        if (mounted) setState(() => _quoteByDate[dateStr] = quote);
+      }
     }
   }
 
@@ -198,7 +219,8 @@ class _CalendarScreenState extends State<CalendarScreen>
             return Dialog(
               backgroundColor: colors.background,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                 child: Column(
@@ -208,10 +230,11 @@ class _CalendarScreenState extends State<CalendarScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: Icon(Icons.chevron_left,
-                              color: colors.textPrimary),
-                          onPressed: () =>
-                              setDialogState(() => pickerYear--),
+                          icon: Icon(
+                            Icons.chevron_left,
+                            color: colors.textPrimary,
+                          ),
+                          onPressed: () => setDialogState(() => pickerYear--),
                         ),
                         SizedBox(
                           width: 88,
@@ -227,10 +250,11 @@ class _CalendarScreenState extends State<CalendarScreen>
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.chevron_right,
-                              color: colors.textPrimary),
-                          onPressed: () =>
-                              setDialogState(() => pickerYear++),
+                          icon: Icon(
+                            Icons.chevron_right,
+                            color: colors.textPrimary,
+                          ),
+                          onPressed: () => setDialogState(() => pickerYear++),
                         ),
                       ],
                     ),
@@ -244,24 +268,20 @@ class _CalendarScreenState extends State<CalendarScreen>
                       childAspectRatio: 1.6,
                       children: List.generate(12, (i) {
                         final m = i + 1;
-                        final isActive =
-                            pickerYear == _year && m == _month;
+                        final isActive = pickerYear == _year && m == _month;
                         final isPickerSelected = m == pickerMonth;
                         return GestureDetector(
-                          onTap: () =>
-                              setDialogState(() => pickerMonth = m),
+                          onTap: () => setDialogState(() => pickerMonth = m),
                           child: Container(
                             decoration: BoxDecoration(
                               color: isActive
                                   ? colors.accent
                                   : isPickerSelected
-                                      ? colors.accent
-                                          .withValues(alpha: 0.12)
-                                      : colors.surface,
+                                  ? colors.accent.withValues(alpha: 0.12)
+                                  : colors.surface,
                               borderRadius: BorderRadius.circular(8),
                               border: isPickerSelected && !isActive
-                                  ? Border.all(
-                                      color: colors.accent, width: 1.5)
+                                  ? Border.all(color: colors.accent, width: 1.5)
                                   : null,
                             ),
                             alignment: Alignment.center,
@@ -289,8 +309,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         onPressed: () {
                           setState(() {
@@ -337,8 +356,7 @@ class _CalendarScreenState extends State<CalendarScreen>
         scrolledUnderElevation: 0,
         title: Text(
           '달력',
-          style: AppTextStyles.sectionTitle
-              .copyWith(color: colors.textPrimary),
+          style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary),
         ),
         foregroundColor: colors.textPrimary,
       ),
@@ -356,10 +374,8 @@ class _CalendarScreenState extends State<CalendarScreen>
                     color: colors.surface,
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      ),
+                      transitionBuilder: (child, animation) =>
+                          FadeTransition(opacity: animation, child: child),
                       layoutBuilder: (currentChild, previousChildren) => Stack(
                         alignment: Alignment.topCenter,
                         children: [
@@ -420,9 +436,7 @@ class _CalendarScreenState extends State<CalendarScreen>
           IconButton(
             icon: Icon(
               Icons.chevron_right,
-              color: nextDisabled
-                  ? colors.divider
-                  : colors.textPrimary,
+              color: nextDisabled ? colors.divider : colors.textPrimary,
             ),
             onPressed: nextDisabled ? null : _nextMonth,
           ),
@@ -468,31 +482,33 @@ class _CalendarScreenState extends State<CalendarScreen>
     final today = DateTime.now();
     final todayStr = '${today.year}-${_pad(today.month)}-${_pad(today.day)}';
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final cellW = constraints.maxWidth / 7;
-      return Column(
-        children: List.generate(rows, (row) {
-          return Row(
-            children: List.generate(7, (col) {
-              final day = row * 7 + col - startOffset + 1;
-              if (day < 1 || day > daysInMonth) {
-                return SizedBox(width: cellW, height: 48);
-              }
-              final dateStr = '$_year-${_pad(_month)}-${_pad(day)}';
-              return _buildDayCell(
-                colors: colors,
-                day: day,
-                col: col,
-                dateStr: dateStr,
-                todayStr: todayStr,
-                daysInMonth: daysInMonth,
-                cellW: cellW,
-              );
-            }),
-          );
-        }),
-      );
-    });
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellW = constraints.maxWidth / 7;
+        return Column(
+          children: List.generate(rows, (row) {
+            return Row(
+              children: List.generate(7, (col) {
+                final day = row * 7 + col - startOffset + 1;
+                if (day < 1 || day > daysInMonth) {
+                  return SizedBox(width: cellW, height: 48);
+                }
+                final dateStr = '$_year-${_pad(_month)}-${_pad(day)}';
+                return _buildDayCell(
+                  colors: colors,
+                  day: day,
+                  col: col,
+                  dateStr: dateStr,
+                  todayStr: todayStr,
+                  daysInMonth: daysInMonth,
+                  cellW: cellW,
+                );
+              }),
+            );
+          }),
+        );
+      },
+    );
   }
 
   Widget _buildDayCell({
@@ -516,10 +532,12 @@ class _CalendarScreenState extends State<CalendarScreen>
     final nextDateStr = day < daysInMonth
         ? '$_year-${_pad(_month)}-${_pad(day + 1)}'
         : null;
-    final prevAttended = isAttended &&
+    final prevAttended =
+        isAttended &&
         prevDateStr != null &&
         _attendanceDates.contains(prevDateStr);
-    final nextAttended = isAttended &&
+    final nextAttended =
+        isAttended &&
         nextDateStr != null &&
         _attendanceDates.contains(nextDateStr);
 
@@ -698,121 +716,143 @@ class _CalendarScreenState extends State<CalendarScreen>
           _TapScaleButton(
             onTap: () => _navigateToDetail(dateStr),
             child: Container(
-            decoration: BoxDecoration(
-              color: colors.background,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 인용구 — accent 세로 바 블록
-                if (like != null)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: IntrinsicHeight(
+              decoration: BoxDecoration(
+                color: colors.background,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 인용구 — accent 세로 바 블록
+                  if (like != null ||
+                      (memo != null && _quoteByDate.containsKey(dateStr)))
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              width: 3,
+                              decoration: BoxDecoration(
+                                color: colors.accent,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          quote?.sentence ?? '불러오는 중...',
+                                          style: TextStyle(
+                                            fontFamily: 'Pretendard',
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w400,
+                                            height: 1.65,
+                                            color: colors.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                      if (like != null) ...[
+                                        const SizedBox(width: 8),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 2,
+                                          ),
+                                          child: Icon(
+                                            Icons.favorite,
+                                            size: 14,
+                                            color: colors.accent,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  if (quote?.author.isNotEmpty == true) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '— ${quote!.author}',
+                                      style: TextStyle(
+                                        fontFamily: 'Pretendard',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w300,
+                                        color: colors.textSecondary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // 구분선 + 메모 영역
+                  if (memo != null) ...[
+                    if (like != null || _quoteByDate.containsKey(dateStr))
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: colors.divider,
+                        indent: 16,
+                        endIndent: 16,
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 3,
-                            decoration: BoxDecoration(
-                              color: colors.accent,
-                              borderRadius: BorderRadius.circular(2),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 1),
+                            child: Icon(
+                              Icons.edit_note_outlined,
+                              size: 13,
+                              color: colors.textSecondary,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 6),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  quote?.sentence ?? '불러오는 중...',
-                                  style: TextStyle(
-                                    fontFamily: 'Pretendard',
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w400,
-                                    height: 1.65,
-                                    color: colors.textPrimary,
-                                  ),
-                                ),
-                                if (quote?.author.isNotEmpty == true) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '— ${quote!.author}',
-                                    style: TextStyle(
-                                      fontFamily: 'Pretendard',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w300,
-                                      color: colors.textSecondary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ],
+                            child: Text(
+                              memo.content,
+                              style: TextStyle(
+                                fontFamily: 'Pretendard',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                height: 1.5,
+                                color: colors.textPrimary,
+                              ),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                // 구분선 + 메모 영역
-                if (memo != null) ...[
-                  if (like != null)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: colors.divider,
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 1),
-                          child: Icon(
-                            Icons.edit_note_outlined,
-                            size: 13,
-                            color: colors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            memo.content,
-                            style: TextStyle(
-                              fontFamily: 'Pretendard',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              height: 1.5,
-                              color: colors.textPrimary,
-                            ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
           ), // _TapScaleButton
         ],
       ),
@@ -826,8 +866,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     final activeDates = {
       ..._likeByDate.keys.where((d) => d.startsWith(prefix)),
       ..._memoByDate.keys.where((d) => d.startsWith(prefix)),
-    }.toList()
-      ..sort();
+    }.toList()..sort((a, b) => b.compareTo(a));
 
     if (activeDates.isEmpty) {
       return Center(
@@ -844,7 +883,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      padding: const EdgeInsets.fromLTRB(5, 25, 20, 20),
       itemCount: activeDates.length,
       itemBuilder: (context, i) {
         final dateStr = activeDates[i];
@@ -872,12 +911,15 @@ class _CalendarScreenState extends State<CalendarScreen>
   }
 
   Widget _buildTimelineItem(
-      String dateStr, bool isLast, AppColorTokens colors) {
+    String dateStr,
+    bool isLast,
+    AppColorTokens colors,
+  ) {
     final like = _likeByDate[dateStr];
     final memo = _memoByDate[dateStr];
     final quote = _quoteByDate[dateStr];
     final parts = dateStr.split('-');
-    final displayDate = '${parts[1]}.${parts[2]}';
+    final displayDate = parts[2];
 
     return GestureDetector(
       onTap: () => _navigateToDetail(dateStr),
@@ -919,12 +961,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                   ),
                 ),
                 if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 1,
-                      color: colors.divider,
-                    ),
-                  ),
+                  Expanded(child: Container(width: 1, color: colors.divider)),
               ],
             ),
             const SizedBox(width: 12),
@@ -935,18 +972,39 @@ class _CalendarScreenState extends State<CalendarScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (like != null) ...[
-                      Text(
-                        quote?.sentence ?? '불러오는 중...',
-                        style: TextStyle(
-                          fontFamily: 'Pretendard',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          height: 1.65,
-                          color: colors.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    if (like != null || _quoteByDate.containsKey(dateStr)) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              quote?.sentence ?? '불러오는 중...',
+                              style: TextStyle(
+                                fontFamily: 'Pretendard',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                height: 1.65,
+                                color: colors.textPrimary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (like != null) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 5,
+                                right: 10,
+                                left: 8,
+                              ),
+                              child: Icon(
+                                Icons.favorite,
+                                size: 13,
+                                color: colors.accent,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       if (quote?.author.isNotEmpty == true)
                         Padding(
@@ -966,13 +1024,15 @@ class _CalendarScreenState extends State<CalendarScreen>
                     ],
                     if (memo != null) ...[
                       const SizedBox(height: 8),
-                      Divider(
-                          height: 1, thickness: 1, color: colors.divider),
+                      Divider(height: 1, thickness: 1, color: colors.divider),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.edit_note_outlined,
-                              size: 12, color: colors.textSecondary),
+                          Icon(
+                            Icons.edit_note_outlined,
+                            size: 12,
+                            color: colors.textSecondary,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(

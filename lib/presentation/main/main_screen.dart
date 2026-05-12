@@ -379,7 +379,7 @@ class _MainScreenState extends State<MainScreen> {
 
             // 날짜
             _Fade(
-              visible: _active,
+              visible: true,
               child: Text(
                 _dateLabel,
                 style: AppTextStyles.bodySmall.copyWith(
@@ -391,20 +391,15 @@ class _MainScreenState extends State<MainScreen> {
             const SizedBox(height: 24),
 
             // 메인 문장
-            AnimatedOpacity(
-              opacity: _active ? 1.0 : 0.22,
-              duration: const Duration(milliseconds: 280),
-              curve: Curves.easeInOut,
-              child: Text(
-                _quote?.sentence ?? '등록된 문장이 없습니다.',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.sentenceBody(color: colors.textPrimary),
-              ),
+            Text(
+              _quote?.sentence ?? '등록된 문장이 없습니다.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.sentenceBody(color: colors.textPrimary),
             ),
 
             // 저자
             _Fade(
-              visible: _active,
+              visible: true,
               child: Padding(
                 padding: const EdgeInsets.only(top: 20),
                 child: Text(
