@@ -382,7 +382,7 @@ class _MainScreenState extends State<MainScreen> {
               visible: _active,
               child: Text(
                 _dateLabel,
-                style: AppTextStyles.dateLabel.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: colors.textSecondary,
                 ),
               ),
@@ -415,11 +415,36 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
 
+            // 메모 내용
+            if (_currentMemo != null && _currentMemo!.content.isNotEmpty)
+              _Fade(
+                visible: _active,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _currentMemo!.content,
+                      style: AppTextStyles.body.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ),
+
             // 액션 버튼
             _Fade(
               visible: _active,
               child: Padding(
-                padding: const EdgeInsets.only(top: 40),
+                padding: const EdgeInsets.only(top: 28),
                 child: _buildActions(colors),
               ),
             ),

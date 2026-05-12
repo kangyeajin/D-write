@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'dart:ui' as ui;
+import 'dart:ui';
 
 import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
@@ -7,11 +6,9 @@ import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
+import 'package:d_write/presentation/main/save_edit_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:gallery_saver_plus/gallery_saver.dart';
-import 'package:path_provider/path_provider.dart';
 
 class LikedSentenceDetailScreen extends StatefulWidget {
   const LikedSentenceDetailScreen({
@@ -36,13 +33,11 @@ class LikedSentenceDetailScreen extends StatefulWidget {
 
 class _LikedSentenceDetailScreenState
     extends State<LikedSentenceDetailScreen> {
-  final GlobalKey _repaintKey = GlobalKey();
   final _likeService = LikeService();
   final _memoService = MemoService();
 
   late bool _isLiked;
   Memo? _memo;
-  bool _isSaving = false;
 
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
@@ -86,58 +81,185 @@ class _LikedSentenceDetailScreenState
 
     final controller = TextEditingController(text: _memo?.content ?? '');
     final isEditing = _memo != null;
+    final colors = AppColorTokens.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.22),
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(isEditing ? '메모 수정' : '메모 추가'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: 5,
-            minLines: 3,
-            decoration: const InputDecoration(
-              hintText: '이 문장에 대한 생각을 기록해보세요.',
-              border: OutlineInputBorder(),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 40,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.surface.withValues(alpha: isDark ? 0.82 : 0.90),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.55),
+                    width: 1,
+                  ),
+                ),
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: colors.textSecondary,
+                        ),
+                        tooltip: '닫기',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            controller: controller,
+                            autofocus: true,
+                            maxLines: 5,
+                            minLines: 3,
+                            style: AppTextStyles.body.copyWith(
+                              color: colors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '이 문장에 대한 생각을 기록해보세요.',
+                              hintStyle: AppTextStyles.body.copyWith(
+                                color: colors.textTertiary,
+                              ),
+                              filled: true,
+                              fillColor: colors.background.withValues(
+                                alpha: 0.35,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                                vertical: 20,
+                              ),
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: colors.divider,
+                                  width: 1,
+                                ),
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: colors.divider,
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: colors.accent,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              if (isEditing)
+                                TextButton(
+                                  onPressed: () async {
+                                    Navigator.pop(dialogContext);
+                                    await _deleteMemo();
+                                  },
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: colors.error,
+                                    minimumSize: const Size(44, 44),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: Text(
+                                    '삭제',
+                                    style: AppTextStyles.button.copyWith(
+                                      color: colors.error,
+                                    ),
+                                  ),
+                                ),
+                              const Spacer(),
+                              OutlinedButton(
+                                onPressed: () async {
+                                  final text = controller.text.trim();
+                                  Navigator.pop(dialogContext);
+                                  await _saveMemo(uid, text);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: colors.textPrimary,
+                                  side: BorderSide(
+                                    color: colors.textPrimary.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    width: 1,
+                                  ),
+                                  minimumSize: const Size(72, 40),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  '저장',
+                                  style: AppTextStyles.button.copyWith(
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          actions: [
-            if (isEditing)
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(dialogContext);
-                  await _deleteMemo();
-                },
-                child: const Text('삭제', style: TextStyle(color: Colors.red)),
-              ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final text = controller.text.trim();
-                Navigator.pop(dialogContext);
-                await _saveMemo(uid, text);
-              },
-              child: const Text('저장'),
-            ),
-          ],
         );
       },
     );
   }
 
   Future<void> _saveMemo(String uid, String content) async {
+    debugPrint(
+      '[MEMO] 저장 시작 — isEditing=${_memo != null}, length=${content.length}',
+    );
     if (content.isEmpty) {
+      debugPrint('[MEMO] 빈 내용 → ${_memo != null ? '기존 메모 삭제' : '스킵'}');
       if (_memo != null) await _deleteMemo();
+      return;
+    }
+    if (_memo != null && content == _memo!.content) {
+      debugPrint('[MEMO] 내용 미변경 → 업데이트 생략');
       return;
     }
     if (_memo != null) {
       await _memoService.updateMemo(_memo!.id, content);
+      debugPrint('[MEMO] 수정 완료 — id=${_memo!.id}');
     } else {
       await _memoService.saveMemo(uid, widget.quoteId, content);
+      debugPrint('[MEMO] 신규 저장 완료 — quoteId=${widget.quoteId}');
     }
     final updated =
         await _memoService.getMemoForUserAndQuote(uid, widget.quoteId);
@@ -149,47 +271,6 @@ class _LikedSentenceDetailScreenState
     if (memo == null) return;
     await _memoService.deleteMemo(memo.id);
     if (mounted) setState(() => _memo = null);
-  }
-
-  // ── 이미지 저장 ────────────────────────────────────────────
-  Future<void> _saveImage() async {
-    setState(() => _isSaving = true);
-    try {
-      final boundary = _repaintKey.currentContext
-          ?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) throw Exception('RenderRepaintBoundary not found');
-
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) throw Exception('toByteData returned null');
-
-      final bytes = byteData.buffer.asUint8List();
-      final dir = await getTemporaryDirectory();
-      final file = File(
-        '${dir.path}/quote_${DateTime.now().millisecondsSinceEpoch}.png',
-      );
-      await file.writeAsBytes(bytes);
-
-      final result =
-          await GallerySaver.saveImage(file.path, albumName: 'D-Write');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              result == true ? '이미지가 갤러리에 저장되었습니다.' : '저장에 실패했습니다.'),
-        ),
-      );
-    } catch (e) {
-      debugPrint('[ERROR] _saveImage error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('저장에 실패했습니다.')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
   }
 
   // ── 빌드 ──────────────────────────────────────────────────
@@ -205,134 +286,120 @@ class _LikedSentenceDetailScreenState
         elevation: 0,
         foregroundColor: colors.textPrimary,
       ),
-      body: Stack(
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 40,
+      body: SingleChildScrollView(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.sizeOf(context).height - kToolbarHeight,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 40,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 날짜
+                        Text(
+                          _dateLabel,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: colors.textSecondary,
+                          ),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // 날짜
-                            Text(
-                              _dateLabel,
-                              style: AppTextStyles.bodySmall.copyWith(
+                        const SizedBox(height: 24),
+                        // 문장
+                        Text(
+                          quote?.sentence ?? '(삭제된 문장)',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.sentenceBody(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        if (quote != null && quote.author.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            '— ${quote.author}',
+                            style: AppTextStyles.sentenceSource.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                        // 메모 박스
+                        if (_hasMemo) ...[
+                          const SizedBox(height: 28),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _memo!.content,
+                              style: AppTextStyles.body.copyWith(
                                 color: colors.textSecondary,
                               ),
+                              maxLines: 10,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 24),
-                            // 문장 + 출처 (이미지 저장 영역)
-                            RepaintBoundary(
-                              key: _repaintKey,
-                              child: ColoredBox(
-                                color: colors.background,
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        quote?.sentence ?? '(삭제된 문장)',
-                                        textAlign: TextAlign.center,
-                                        style: AppTextStyles.sentenceBody(
-                                          color: colors.textPrimary,
-                                        ),
+                          ),
+                        ],
+                        // 액션 버튼
+                        const SizedBox(height: 36),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _ActionButton(
+                              icon: _isLiked
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              iconColor: _isLiked
+                                  ? colors.accent
+                                  : colors.textSecondary,
+                              onPressed: _toggleLike,
+                              tooltip: '좋아요',
+                            ),
+                            const SizedBox(width: 32),
+                            _ActionButton(
+                              icon: _hasMemo
+                                  ? Icons.edit
+                                  : Icons.edit_outlined,
+                              iconColor: _hasMemo
+                                  ? colors.accent
+                                  : colors.textSecondary,
+                              onPressed: _openMemoSheet,
+                              tooltip: '메모',
+                            ),
+                            const SizedBox(width: 32),
+                            _ActionButton(
+                              icon: Icons.download_outlined,
+                              iconColor: colors.textSecondary,
+                              onPressed: quote != null
+                                  ? () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            SaveEditScreen(quote: quote),
                                       ),
-                                      if (quote != null &&
-                                          quote.author.isNotEmpty) ...[
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          '— ${quote.author}',
-                                          style:
-                                              AppTextStyles.sentenceSource
-                                                  .copyWith(
-                                            color: colors.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // 메모 박스
-                            if (_hasMemo) ...[
-                              const SizedBox(height: 28),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: colors.surface,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  _memo!.content,
-                                  style: AppTextStyles.body.copyWith(
-                                    color: colors.textSecondary,
-                                  ),
-                                  maxLines: 10,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                            // 액션 버튼
-                            const SizedBox(height: 36),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _ActionButton(
-                                  icon: _isLiked
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  iconColor:
-                                      _isLiked ? colors.accent : colors.textSecondary,
-                                  onPressed: _toggleLike,
-                                  tooltip: '좋아요',
-                                ),
-                                const SizedBox(width: 32),
-                                _ActionButton(
-                                  icon: _hasMemo
-                                      ? Icons.edit
-                                      : Icons.edit_outlined,
-                                  iconColor: colors.textSecondary,
-                                  onPressed: _openMemoSheet,
-                                  tooltip: '메모',
-                                ),
-                                const SizedBox(width: 32),
-                                _ActionButton(
-                                  icon: Icons.download_outlined,
-                                  iconColor: colors.textSecondary,
-                                  onPressed: _isSaving ? null : _saveImage,
-                                  tooltip: '저장',
-                                ),
-                              ],
+                                    )
+                                  : null,
+                              tooltip: '저장',
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-          if (_isSaving)
-            const ColoredBox(
-              color: Color(0x55000000),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-        ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
