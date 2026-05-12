@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show DeviceOrientation, SystemChrome;
 import 'package:gallery_saver_plus/gallery_saver.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:share_plus/share_plus.dart';
@@ -809,8 +810,7 @@ class _OverlayText extends StatelessWidget {
     final color = _resolvedColor;
     final shadows = _shadows;
     return switch (fontChoice) {
-      _CameraFontChoice.gowunBatang => TextStyle(
-          fontFamily: 'GowunBatang',
+      _CameraFontChoice.gowunBatang => GoogleFonts.gowunBatang(
           fontSize: size,
           fontWeight: FontWeight.w400,
           color: color,
@@ -1370,10 +1370,19 @@ class _FontStrip extends StatelessWidget {
   final ValueChanged<_CameraFontChoice> onChanged;
 
   static const _opts = [
-    (_CameraFontChoice.gowunBatang,    '가', 'GowunBatang',  FontWeight.w400),
-    (_CameraFontChoice.pretendard,     '가', 'Pretendard',   FontWeight.w400),
-    (_CameraFontChoice.pretendardBold, '가', 'Pretendard',   FontWeight.w700),
+    (_CameraFontChoice.gowunBatang,    '가'),
+    (_CameraFontChoice.pretendard,     '가'),
+    (_CameraFontChoice.pretendardBold, '가'),
   ];
+
+  TextStyle _previewStyle(_CameraFontChoice choice, bool isSelected) {
+    final color = isSelected ? Colors.black : Colors.white;
+    return switch (choice) {
+      _CameraFontChoice.gowunBatang    => GoogleFonts.gowunBatang(fontSize: 17, fontWeight: FontWeight.w400, color: color),
+      _CameraFontChoice.pretendard     => TextStyle(fontFamily: 'Pretendard', fontSize: 17, fontWeight: FontWeight.w400, color: color),
+      _CameraFontChoice.pretendardBold => TextStyle(fontFamily: 'Pretendard', fontSize: 17, fontWeight: FontWeight.w700, color: color),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1392,19 +1401,11 @@ class _FontStrip extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.white.withValues(alpha: 0.90)
-                    : Colors.white.withValues(alpha: 0.15),
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
               ),
               alignment: Alignment.center,
-              child: Text(
-                o.$2,
-                style: TextStyle(
-                  fontFamily: o.$3,
-                  fontWeight: o.$4,
-                  fontSize: 17,
-                  color: isSelected ? Colors.black : Colors.white,
-                ),
-              ),
+              child: Text(o.$2, style: _previewStyle(o.$1, isSelected)),
             ),
           ),
         );
