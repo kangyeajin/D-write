@@ -791,9 +791,9 @@ class _OverlayText extends StatelessWidget {
   final TextAlign textAlign;
 
   double get _fontSizeDp => switch (fontSize) {
-    _CameraFontSize.small  => 16.0,
-    _CameraFontSize.medium => 20.0,
-    _CameraFontSize.large  => 26.0,
+    _CameraFontSize.small  => 18.0,
+    _CameraFontSize.medium => 24.0,
+    _CameraFontSize.large  => 30.0,
   };
 
   Color get _resolvedColor => switch (textColor) {
@@ -861,9 +861,9 @@ class _OverlayText extends StatelessWidget {
             textAlign: textAlign,
             style: TextStyle(
               fontFamily: 'Pretendard',
-              fontSize: _fontSizeDp * 0.65,
+              fontSize: 12,
               fontWeight: FontWeight.w300,
-              color: color.withValues(alpha: 0.70),
+              color: color.withValues(alpha: 0.65),
               height: 1.5,
               shadows: _shadows,
             ),
