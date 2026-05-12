@@ -57,9 +57,22 @@ class QuoteRecommendationService {
     List<String> seenIds = _local.seenQuoteIds;
     if (seenIds.isEmpty) {
       debugPrint('[QUOTE] seenIds 로컬 없음 → Firestore 조회');
-      seenIds = await _userRepo.getSeenQuoteIds(uid);
+      final daily = await _userRepo.getDailyData(uid);
+      seenIds = daily.seenIds;
       await _local.setSeenQuoteIds(seenIds);
       debugPrint('[QUOTE] seenIds 로드 완료 (${seenIds.length}개)');
+
+      // 다른 기기에서 오늘 이미 문장이 배정된 경우 → 동일 문장 반환 (기기 간 일관성)
+      final fsQuoteId = daily.todayQuoteId ?? '';
+      if (daily.todayDate == todayStr && fsQuoteId.isNotEmpty) {
+        debugPrint('[QUOTE] Firestore 오늘 문장 존재 → 재사용 id=$fsQuoteId');
+        final quote = await _quoteRepo.getQuote(fsQuoteId);
+        if (quote != null) {
+          await _local.setTodayQuote(fsQuoteId, todayStr);
+          return quote;
+        }
+        debugPrint('[QUOTE] Firestore 문장 조회 실패 → 신규 선정 진행');
+      }
     } else {
       debugPrint('[QUOTE] seenIds 로컬 캐시 사용 (${seenIds.length}개)');
     }

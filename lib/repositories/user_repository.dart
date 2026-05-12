@@ -78,6 +78,8 @@ class UserRepository {
           'seen_quotes_count': FieldValue.increment(1),
           'attendanceDates': FieldValue.arrayUnion([todayStr]),
           'consecutiveDays': consecutiveDays,
+          'todayDate': todayStr,
+          'todayQuoteId': newQuoteId,
         });
       });
     } else {
@@ -86,13 +88,25 @@ class UserRepository {
         'seen_quotes_count': FieldValue.increment(1),
         'attendanceDates': FieldValue.arrayUnion([todayStr]),
         'consecutiveDays': consecutiveDays,
+        'todayDate': todayStr,
+        'todayQuoteId': newQuoteId,
       });
     }
   }
 
-  Future<List<String>> getSeenQuoteIds(String uid) async {
+  /// seenQuoteIds + 오늘 배정된 문장 정보를 단일 읽기로 반환.
+  /// 기기 간 동일 문장 보장을 위해 getTodayQuote 초기화 시 사용.
+  Future<({List<String> seenIds, String? todayDate, String? todayQuoteId})>
+      getDailyData(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
-    if (!doc.exists || doc.data() == null) return [];
-    return List<String>.from((doc.data()!['seenQuoteIds'] as List?) ?? []);
+    if (!doc.exists || doc.data() == null) {
+      return (seenIds: <String>[], todayDate: null, todayQuoteId: null);
+    }
+    final data = doc.data()!;
+    return (
+      seenIds: List<String>.from((data['seenQuoteIds'] as List?) ?? []),
+      todayDate: data['todayDate'] as String?,
+      todayQuoteId: data['todayQuoteId'] as String?,
+    );
   }
 }
