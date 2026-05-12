@@ -115,6 +115,11 @@ class LocalDataService {
     );
   }
 
+  Future<void> restoreAttendance(List<String> dates, int consecutive) async {
+    await _userBox.put(_kLocalAttendanceDates, dates);
+    await _userBox.put(_kConsecutiveDays, consecutive);
+  }
+
   Future<void> clear() async {
     await _userBox.clear();
     await _quotesBox.clear();

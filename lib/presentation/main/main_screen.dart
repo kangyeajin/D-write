@@ -3,6 +3,7 @@ import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/models/user_model.dart';
 import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
+import 'package:d_write/core/services/local_data_service.dart';
 import 'package:d_write/core/services/quote_recommendation_service.dart';
 import 'package:d_write/core/services/quote_service.dart';
 import 'package:d_write/core/services/user_service.dart';
@@ -70,6 +71,14 @@ class _MainScreenState extends State<MainScreen> {
     debugPrint(
       '[AUTH] 프로필 로드 완료 — role=${profile.role.name}, palette=${profile.palette}',
     );
+
+    final local = LocalDataService();
+    if (local.localAttendanceDates.isEmpty && profile.attendanceDates.isNotEmpty) {
+      await local.restoreAttendance(profile.attendanceDates, profile.consecutiveDays);
+      debugPrint(
+        '[ATTEND] Firestore에서 출석 데이터 복원 — ${profile.attendanceDates.length}개, consecutiveDays=${profile.consecutiveDays}',
+      );
+    }
   }
 
   Future<void> _loadQuote() async {
