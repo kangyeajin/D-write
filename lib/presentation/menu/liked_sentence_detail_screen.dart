@@ -10,8 +10,6 @@ import 'package:d_write/presentation/main/save_edit_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-/// 상세 화면에서 pop 시 반환하는 결과 타입
-typedef DetailResult = ({String quoteId, bool isLiked, Memo? memo});
 
 class LikedSentenceDetailScreen extends StatefulWidget {
   const LikedSentenceDetailScreen({
@@ -276,32 +274,18 @@ class _LikedSentenceDetailScreenState
     if (mounted) setState(() => _memo = null);
   }
 
-  void _popWithResult() {
-    Navigator.of(context).pop((
-      quoteId: widget.quoteId,
-      isLiked: _isLiked,
-      memo: _memo,
-    ));
-  }
-
   // ── 빌드 ──────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final colors = AppColorTokens.of(context);
     final quote = widget.quote;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _popWithResult();
-      },
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: colors.background,
         elevation: 0,
         foregroundColor: colors.textPrimary,
-        leading: BackButton(onPressed: _popWithResult),
       ),
       body: SingleChildScrollView(
         child: Builder(
@@ -415,7 +399,6 @@ class _LikedSentenceDetailScreenState
             );
           },
         ),
-      ),
       ),
     );
   }
