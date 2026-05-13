@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/models/user_model.dart';
@@ -113,20 +114,31 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _loadLikeStatus(String quoteId) async {
     final uid = _uid;
     if (uid == null) return;
+    final local = LocalDataService();
+    final cached = local.todayIsLiked;
+    if (cached != null) {
+      if (mounted) setState(() => _isLiked = cached);
+      return;
+    }
     final liked = await _likeService.isLiked(uid, quoteId);
     if (mounted) {
       setState(() => _isLiked = liked);
-      LocalDataService().setTodayLike(liked);
+      local.setTodayLike(liked);
     }
   }
 
   Future<void> _loadCurrentMemo(String quoteId) async {
     final uid = _uid;
     if (uid == null) return;
+    final local = LocalDataService();
+    if (local.isTodayMemoCached) {
+      if (mounted) setState(() => _currentMemo = local.todayMemo);
+      return;
+    }
     final memo = await _memoService.getMemoForUserAndQuote(uid, quoteId);
     if (mounted) {
       setState(() => _currentMemo = memo);
-      LocalDataService().setTodayMemo(memo);
+      local.setTodayMemo(memo);
     }
   }
 
@@ -339,14 +351,35 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
     try {
+      final Memo updated;
       if (_currentMemo != null) {
         await _memoService.updateMemo(_currentMemo!.id, content);
         debugPrint('[MEMO] 수정 완료 — id=${_currentMemo!.id}');
+        updated = Memo(
+          id: _currentMemo!.id,
+          quoteId: _currentMemo!.quoteId,
+          userId: _currentMemo!.userId,
+          content: content,
+          date: _currentMemo!.date,
+          createdAt: _currentMemo!.createdAt,
+        );
       } else {
-        await _memoService.saveMemo(uid, quoteId, content);
-        debugPrint('[MEMO] 신규 저장 완료 — quoteId=$quoteId');
+        final docId = await _memoService.saveMemo(uid, quoteId, content);
+        debugPrint('[MEMO] 신규 저장 완료 — id=$docId');
+        final now = DateTime.now();
+        updated = Memo(
+          id: docId,
+          quoteId: quoteId,
+          userId: uid,
+          content: content,
+          date: '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+          createdAt: Timestamp.now(),
+        );
       }
-      await _loadCurrentMemo(quoteId); // Firestore 재조회 후 Hive 동기화
+      if (mounted) {
+        setState(() => _currentMemo = updated);
+        LocalDataService().setTodayMemo(updated);
+      }
     } catch (_) {
       if (mounted) _showNetworkError();
     }

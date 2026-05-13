@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/services/like_service.dart';
@@ -281,15 +282,31 @@ class _LikedSentenceDetailScreenState
       return;
     }
     try {
+      final Memo updated;
       if (_memo != null) {
         await _memoService.updateMemo(_memo!.id, content);
         debugPrint('[MEMO] 수정 완료 — id=${_memo!.id}');
+        updated = Memo(
+          id: _memo!.id,
+          quoteId: _memo!.quoteId,
+          userId: _memo!.userId,
+          content: content,
+          date: _memo!.date,
+          createdAt: _memo!.createdAt,
+        );
       } else {
-        await _memoService.saveMemo(uid, widget.quoteId, content);
-        debugPrint('[MEMO] 신규 저장 완료 — quoteId=${widget.quoteId}');
+        final docId = await _memoService.saveMemo(uid, widget.quoteId, content);
+        debugPrint('[MEMO] 신규 저장 완료 — id=$docId');
+        final now = DateTime.now();
+        updated = Memo(
+          id: docId,
+          quoteId: widget.quoteId,
+          userId: uid,
+          content: content,
+          date: '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+          createdAt: Timestamp.now(),
+        );
       }
-      final updated =
-          await _memoService.getMemoForUserAndQuote(uid, widget.quoteId);
       if (mounted) {
         setState(() => _memo = updated);
         final local = LocalDataService();

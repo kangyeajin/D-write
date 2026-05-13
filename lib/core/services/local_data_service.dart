@@ -50,6 +50,10 @@ class LocalDataService {
   }
 
   Future<void> setTodayQuote(String quoteId, String dateStr) async {
+    if (todayQuoteId != quoteId) {
+      await _userBox.delete(_kTodayIsLiked);
+      await _userBox.delete(_kTodayMemo);
+    }
     await _userBox.put(_kTodayQuoteId, quoteId);
     await _userBox.put(_kLastUpdateDate, dateStr);
   }

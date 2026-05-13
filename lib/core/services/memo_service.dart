@@ -3,7 +3,7 @@ import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/repositories/memo_repository.dart';
 
 abstract class IMemoService {
-  Future<void> saveMemo(String userId, String quoteId, String content);
+  Future<String> saveMemo(String userId, String quoteId, String content);
   Future<Memo?> getMemoForUserAndQuote(String userId, String quoteId);
   Future<void> updateMemo(String memoId, String content);
   Future<void> deleteMemo(String memoId);
@@ -16,11 +16,12 @@ class MemoService implements IMemoService {
   MemoService({MemoRepository? repo}) : _repo = repo ?? MemoRepository();
 
   @override
-  Future<void> saveMemo(String userId, String quoteId, String content) async {
+  Future<String> saveMemo(String userId, String quoteId, String content) async {
     try {
-      await _repo.addMemo(userId, quoteId, content);
+      return await _repo.addMemo(userId, quoteId, content);
     } catch (e) {
       debugPrint('MemoService.saveMemo error: $e');
+      rethrow;
     }
   }
 
@@ -40,6 +41,7 @@ class MemoService implements IMemoService {
       await _repo.updateMemo(memoId, content);
     } catch (e) {
       debugPrint('MemoService.updateMemo error: $e');
+      rethrow;
     }
   }
 
@@ -49,6 +51,7 @@ class MemoService implements IMemoService {
       await _repo.deleteMemo(memoId);
     } catch (e) {
       debugPrint('MemoService.deleteMemo error: $e');
+      rethrow;
     }
   }
 

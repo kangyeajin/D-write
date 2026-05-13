@@ -12,9 +12,9 @@ class MemoRepository {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
-  Future<void> addMemo(String userId, String quoteId, String content) async {
+  Future<String> addMemo(String userId, String quoteId, String content) async {
     try {
-      await _db.collection('memos').add({
+      final ref = await _db.collection('memos').add({
         'userId': userId,
         'quoteId': quoteId,
         'content': content,
@@ -22,6 +22,7 @@ class MemoRepository {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      return ref.id;
     } on FirebaseException catch (e) {
       debugPrint('MemoRepository.addMemo error [${e.code}]: ${e.message}');
       rethrow;
