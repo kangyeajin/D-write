@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -12,6 +14,8 @@ const _kCachedMonth = 'cachedMonth';
 const _kLocalAttendanceDates = 'localAttendanceDates';
 const _kConsecutiveDays = 'consecutiveDays';
 const _kSeenQuoteIds = 'seenQuoteIds';
+const _kTodayIsLiked = 'todayIsLiked';
+const _kTodayMemo = 'todayMemo';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._();
@@ -71,6 +75,46 @@ class LocalDataService {
 
   Future<void> setSeenQuoteIds(List<String> ids) async {
     await _userBox.put(_kSeenQuoteIds, ids);
+  }
+
+  // ── today like / memo cache ────────────────────────────────
+
+  bool? get todayIsLiked => _userBox.get(_kTodayIsLiked) as bool?;
+
+  bool get isTodayMemoCached => _userBox.containsKey(_kTodayMemo);
+
+  Memo? get todayMemo {
+    final raw = _userBox.get(_kTodayMemo);
+    if (raw == null) return null;
+    final m = Map<String, dynamic>.from(raw as Map);
+    if (m['exists'] != true) return null;
+    return Memo(
+      id: m['id'] as String,
+      quoteId: m['quoteId'] as String,
+      userId: m['userId'] as String,
+      content: m['content'] as String,
+      date: m['date'] as String,
+      createdAt: Timestamp.fromMillisecondsSinceEpoch(m['createdAt'] as int),
+    );
+  }
+
+  Future<void> setTodayLike(bool isLiked) =>
+      _userBox.put(_kTodayIsLiked, isLiked);
+
+  Future<void> setTodayMemo(Memo? memo) async {
+    if (memo == null || memo.content.isEmpty) {
+      await _userBox.put(_kTodayMemo, {'exists': false});
+    } else {
+      await _userBox.put(_kTodayMemo, {
+        'exists': true,
+        'id': memo.id,
+        'quoteId': memo.quoteId,
+        'userId': memo.userId,
+        'content': memo.content,
+        'date': memo.date,
+        'createdAt': memo.createdAt.millisecondsSinceEpoch,
+      });
+    }
   }
 
   // ── quotes_cache ───────────────────────────────────────────

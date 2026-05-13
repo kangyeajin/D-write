@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/services/like_service.dart';
+import 'package:d_write/core/services/local_data_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
@@ -57,6 +58,22 @@ class _LikedSentenceDetailScreenState
     return date.substring(5).replaceAll('-', '.');
   }
 
+  void _showNetworkError() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('저장 실패'),
+        content: const Text('네트워크 연결을 확인해주세요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── 좋아요 토글 ────────────────────────────────────────────
   Future<void> _toggleLike() async {
     final uid = _uid;
@@ -64,6 +81,10 @@ class _LikedSentenceDetailScreenState
 
     final prev = _isLiked;
     setState(() => _isLiked = !_isLiked);
+    final local = LocalDataService();
+    final isToday = widget.quoteId == local.todayQuoteId;
+    if (isToday) local.setTodayLike(_isLiked);
+
     try {
       if (prev) {
         await _likeService.removeLike(uid, widget.quoteId);
@@ -71,7 +92,11 @@ class _LikedSentenceDetailScreenState
         await _likeService.addLike(uid, widget.quoteId);
       }
     } catch (_) {
-      if (mounted) setState(() => _isLiked = prev);
+      if (mounted) {
+        setState(() => _isLiked = prev);
+        if (isToday) local.setTodayLike(prev);
+        _showNetworkError();
+      }
     }
   }
 
@@ -255,23 +280,43 @@ class _LikedSentenceDetailScreenState
       debugPrint('[MEMO] 내용 미변경 → 업데이트 생략');
       return;
     }
-    if (_memo != null) {
-      await _memoService.updateMemo(_memo!.id, content);
-      debugPrint('[MEMO] 수정 완료 — id=${_memo!.id}');
-    } else {
-      await _memoService.saveMemo(uid, widget.quoteId, content);
-      debugPrint('[MEMO] 신규 저장 완료 — quoteId=${widget.quoteId}');
+    try {
+      if (_memo != null) {
+        await _memoService.updateMemo(_memo!.id, content);
+        debugPrint('[MEMO] 수정 완료 — id=${_memo!.id}');
+      } else {
+        await _memoService.saveMemo(uid, widget.quoteId, content);
+        debugPrint('[MEMO] 신규 저장 완료 — quoteId=${widget.quoteId}');
+      }
+      final updated =
+          await _memoService.getMemoForUserAndQuote(uid, widget.quoteId);
+      if (mounted) {
+        setState(() => _memo = updated);
+        final local = LocalDataService();
+        if (widget.quoteId == local.todayQuoteId) {
+          local.setTodayMemo(updated);
+        }
+      }
+    } catch (_) {
+      if (mounted) _showNetworkError();
     }
-    final updated =
-        await _memoService.getMemoForUserAndQuote(uid, widget.quoteId);
-    if (mounted) setState(() => _memo = updated);
   }
 
   Future<void> _deleteMemo() async {
     final memo = _memo;
     if (memo == null) return;
-    await _memoService.deleteMemo(memo.id);
-    if (mounted) setState(() => _memo = null);
+    try {
+      await _memoService.deleteMemo(memo.id);
+      if (mounted) {
+        setState(() => _memo = null);
+        final local = LocalDataService();
+        if (widget.quoteId == local.todayQuoteId) {
+          local.setTodayMemo(null);
+        }
+      }
+    } catch (_) {
+      if (mounted) _showNetworkError();
+    }
   }
 
   // ── 빌드 ──────────────────────────────────────────────────

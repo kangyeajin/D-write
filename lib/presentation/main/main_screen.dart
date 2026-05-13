@@ -94,18 +94,40 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _showNetworkError() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('저장 실패'),
+        content: const Text('네트워크 연결을 확인해주세요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _loadLikeStatus(String quoteId) async {
     final uid = _uid;
     if (uid == null) return;
     final liked = await _likeService.isLiked(uid, quoteId);
-    if (mounted) setState(() => _isLiked = liked);
+    if (mounted) {
+      setState(() => _isLiked = liked);
+      LocalDataService().setTodayLike(liked);
+    }
   }
 
   Future<void> _loadCurrentMemo(String quoteId) async {
     final uid = _uid;
     if (uid == null) return;
     final memo = await _memoService.getMemoForUserAndQuote(uid, quoteId);
-    if (mounted) setState(() => _currentMemo = memo);
+    if (mounted) {
+      setState(() => _currentMemo = memo);
+      LocalDataService().setTodayMemo(memo);
+    }
   }
 
   // ── 좋아요 (낙관적 업데이트) ──────────────────────────────────
@@ -116,6 +138,7 @@ class _MainScreenState extends State<MainScreen> {
 
     final previous = _isLiked;
     setState(() => _isLiked = !_isLiked);
+    LocalDataService().setTodayLike(_isLiked);
 
     try {
       if (previous) {
@@ -124,7 +147,11 @@ class _MainScreenState extends State<MainScreen> {
         await _likeService.addLike(uid, quoteId);
       }
     } catch (_) {
-      if (mounted) setState(() => _isLiked = previous);
+      if (mounted) {
+        setState(() => _isLiked = previous);
+        LocalDataService().setTodayLike(previous);
+        _showNetworkError();
+      }
     }
   }
 
@@ -311,21 +338,39 @@ class _MainScreenState extends State<MainScreen> {
       debugPrint('[MEMO] 내용 미변경 → 업데이트 생략');
       return;
     }
-    if (_currentMemo != null) {
-      await _memoService.updateMemo(_currentMemo!.id, content);
-      debugPrint('[MEMO] 수정 완료 — id=${_currentMemo!.id}');
-    } else {
-      await _memoService.saveMemo(uid, quoteId, content);
-      debugPrint('[MEMO] 신규 저장 완료 — quoteId=$quoteId');
+    try {
+      if (_currentMemo != null) {
+        await _memoService.updateMemo(_currentMemo!.id, content);
+        debugPrint('[MEMO] 수정 완료 — id=${_currentMemo!.id}');
+      } else {
+        await _memoService.saveMemo(uid, quoteId, content);
+        debugPrint('[MEMO] 신규 저장 완료 — quoteId=$quoteId');
+      }
+      await _loadCurrentMemo(quoteId); // Firestore 재조회 후 Hive 동기화
+    } catch (_) {
+      if (mounted) _showNetworkError();
     }
-    await _loadCurrentMemo(quoteId);
   }
 
   Future<void> _deleteMemo() async {
     final memo = _currentMemo;
     if (memo == null) return;
-    await _memoService.deleteMemo(memo.id);
-    if (mounted) setState(() => _currentMemo = null);
+    try {
+      await _memoService.deleteMemo(memo.id);
+      if (mounted) {
+        setState(() => _currentMemo = null);
+        LocalDataService().setTodayMemo(null);
+      }
+    } catch (_) {
+      if (mounted) _showNetworkError();
+    }
+  }
+
+  void _syncFromCache() {
+    final local = LocalDataService();
+    final cachedLike = local.todayIsLiked;
+    if (cachedLike != null) setState(() => _isLiked = cachedLike);
+    if (local.isTodayMemoCached) setState(() => _currentMemo = local.todayMemo);
   }
 
   void _activate() {
@@ -612,10 +657,7 @@ class _MainScreenState extends State<MainScreen> {
                           builder: (_) => const LikedSentencesScreen(),
                         ),
                       );
-                      if (mounted && _quote != null) {
-                        _loadLikeStatus(_quote!.id);
-                        _loadCurrentMemo(_quote!.id);
-                      }
+                      if (mounted && _quote != null) _syncFromCache();
                     },
                   ),
                   _DrawerItem(
@@ -628,10 +670,7 @@ class _MainScreenState extends State<MainScreen> {
                           builder: (_) => const MyMemosScreen(),
                         ),
                       );
-                      if (mounted && _quote != null) {
-                        _loadLikeStatus(_quote!.id);
-                        _loadCurrentMemo(_quote!.id);
-                      }
+                      if (mounted && _quote != null) _syncFromCache();
                     },
                   ),
                   if (_userProfile?.role == UserRole.admin) ...[
