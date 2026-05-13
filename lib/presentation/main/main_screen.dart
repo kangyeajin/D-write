@@ -7,6 +7,7 @@ import 'package:d_write/core/services/local_data_service.dart';
 import 'package:d_write/core/services/quote_recommendation_service.dart';
 import 'package:d_write/core/services/quote_service.dart';
 import 'package:d_write/core/services/user_service.dart';
+import 'package:d_write/presentation/menu/liked_sentence_detail_screen.dart' show DetailResult;
 import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/core/theme/theme_notifier.dart';
@@ -605,22 +606,42 @@ class _MainScreenState extends State<MainScreen> {
                   _DrawerItem(
                     label: '좋아요 한 문장',
                     colors: colors,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const LikedSentencesScreen(),
-                      ),
-                    ),
+                    onTap: () async {
+                      final result = await Navigator.push<DetailResult?>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LikedSentencesScreen(
+                            todayQuoteId: _quote?.id,
+                          ),
+                        ),
+                      );
+                      if (result != null && mounted) {
+                        setState(() {
+                          _isLiked = result.isLiked;
+                          _currentMemo = result.memo;
+                        });
+                      }
+                    },
                   ),
                   _DrawerItem(
                     label: '내가 쓴 메모',
                     colors: colors,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const MyMemosScreen(),
-                      ),
-                    ),
+                    onTap: () async {
+                      final result = await Navigator.push<DetailResult?>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MyMemosScreen(
+                            todayQuoteId: _quote?.id,
+                          ),
+                        ),
+                      );
+                      if (result != null && mounted) {
+                        setState(() {
+                          _isLiked = result.isLiked;
+                          _currentMemo = result.memo;
+                        });
+                      }
+                    },
                   ),
                   if (_userProfile?.role == UserRole.admin) ...[
                     _DrawerItem(

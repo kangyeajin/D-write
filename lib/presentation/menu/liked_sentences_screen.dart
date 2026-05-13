@@ -13,7 +13,9 @@ import 'package:flutter/material.dart';
 typedef _LikedItem = ({Like like, Quote? quote, Memo? memo});
 
 class LikedSentencesScreen extends StatefulWidget {
-  const LikedSentencesScreen({super.key});
+  const LikedSentencesScreen({super.key, this.todayQuoteId});
+
+  final String? todayQuoteId;
 
   @override
   State<LikedSentencesScreen> createState() => _LikedSentencesScreenState();
@@ -27,6 +29,7 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
   bool _isLoading = true;
   // String → 연도 헤더, _LikedItem → 데이터 행
   List<dynamic> _rows = [];
+  DetailResult? _pendingResult;
 
   @override
   void initState() {
@@ -86,16 +89,24 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
     return date.substring(5).replaceAll('-', '.');
   }
 
+  void _popWithResult() => Navigator.of(context).pop(_pendingResult);
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorTokens.of(context);
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _popWithResult();
+      },
+      child: Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: colors.background,
         elevation: 0,
         title: Text('좋아요 한 문장', style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary)),
         foregroundColor: colors.textPrimary,
+        leading: BackButton(onPressed: _popWithResult),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -112,6 +123,7 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
                     return _buildItem(row as _LikedItem);
                   },
                 ),
+      ),
     );
   }
 
@@ -135,7 +147,7 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
       children: [
         InkWell(
           onTap: () async {
-            await Navigator.push<void>(
+            final result = await Navigator.push<DetailResult>(
               context,
               MaterialPageRoute(
                 builder: (_) => LikedSentenceDetailScreen(
@@ -146,6 +158,9 @@ class _LikedSentencesScreenState extends State<LikedSentencesScreen> {
                 ),
               ),
             );
+            if (result != null && result.quoteId == widget.todayQuoteId) {
+              _pendingResult = result;
+            }
             _load();
           },
           child: Padding(

@@ -5,7 +5,7 @@ import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/theme/app_palette.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
-import 'package:d_write/presentation/menu/liked_sentence_detail_screen.dart';
+import 'package:d_write/presentation/menu/liked_sentence_detail_screen.dart' show LikedSentenceDetailScreen, DetailResult;
 import 'package:d_write/repositories/quote_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +13,9 @@ import 'package:flutter/material.dart';
 typedef _MemoItem = ({Memo memo, Quote? quote, bool isLiked});
 
 class MyMemosScreen extends StatefulWidget {
-  const MyMemosScreen({super.key});
+  const MyMemosScreen({super.key, this.todayQuoteId});
+
+  final String? todayQuoteId;
 
   @override
   State<MyMemosScreen> createState() => _MyMemosScreenState();
@@ -26,6 +28,7 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
 
   bool _isLoading = true;
   List<dynamic> _rows = [];
+  DetailResult? _pendingResult;
 
   @override
   void initState() {
@@ -85,11 +88,18 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
     return date.substring(5).replaceAll('-', '.');
   }
 
+  void _popWithResult() => Navigator.of(context).pop(_pendingResult);
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorTokens.of(context);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _popWithResult();
+      },
+      child: Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: colors.background,
@@ -100,6 +110,7 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
               .copyWith(color: colors.textPrimary),
         ),
         foregroundColor: colors.textPrimary,
+        leading: BackButton(onPressed: _popWithResult),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -121,6 +132,7 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
                     return _buildItem(row as _MemoItem, colors);
                   },
                 ),
+      ),
     );
   }
 
@@ -142,7 +154,7 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
       children: [
         InkWell(
           onTap: () async {
-            await Navigator.push<void>(
+            final result = await Navigator.push<DetailResult>(
               context,
               MaterialPageRoute(
                 builder: (_) => LikedSentenceDetailScreen(
@@ -154,6 +166,9 @@ class _MyMemosScreenState extends State<MyMemosScreen> {
                 ),
               ),
             );
+            if (result != null && result.quoteId == widget.todayQuoteId) {
+              _pendingResult = result;
+            }
             _load();
           },
           child: Padding(
