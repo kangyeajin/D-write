@@ -693,12 +693,15 @@ class _MainScreenState extends State<MainScreen> {
                   _DrawerItem(
                     label: '달력',
                     colors: colors,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const CalendarScreen(),
-                      ),
-                    ),
+                    onTap: () async {
+                      await Navigator.push<void>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CalendarScreen(),
+                        ),
+                      );
+                      if (mounted && _quote != null) _syncFromCache();
+                    },
                   ),
                   _DrawerItem(
                     label: '좋아요 한 문장',

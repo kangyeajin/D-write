@@ -297,13 +297,12 @@ class _LikedSentenceDetailScreenState
       } else {
         final docId = await _memoService.saveMemo(uid, widget.quoteId, content);
         debugPrint('[MEMO] 신규 저장 완료 — id=$docId');
-        final now = DateTime.now();
         updated = Memo(
           id: docId,
           quoteId: widget.quoteId,
           userId: uid,
           content: content,
-          date: '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+          date: widget.date,
           createdAt: Timestamp.now(),
         );
       }

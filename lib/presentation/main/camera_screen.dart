@@ -65,7 +65,7 @@ class _CameraScreenState extends State<CameraScreen> {
   // 텍스트 스타일
   bool              _isTextMenuOpen = false;
   _CameraFontSize   _camFontSize    = _CameraFontSize.medium;
-  _CameraFontChoice _camFont        = _CameraFontChoice.pretendard;
+  _CameraFontChoice _camFont        = _CameraFontChoice.gowunBatang;
   _CameraTextColor  _camTextColor   = _CameraTextColor.white;
   TextAlign         _camTextAlign   = TextAlign.center;
 
