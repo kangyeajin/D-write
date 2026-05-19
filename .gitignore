@@ -11,6 +11,7 @@ lib/core/config/secrets.dart
 # Personal tools & AI settings
 .bkit/
 .claude/
+.gemini/
 
 # 임시 제외 (yj)
 harness_setup.txt

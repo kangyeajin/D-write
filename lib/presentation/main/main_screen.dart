@@ -46,6 +46,7 @@ class _MainScreenState extends State<MainScreen> {
   final UserService _userService = UserService();
 
   Quote? _quote;
+  bool _isLoading = true;
   bool _active = false;
   bool _isLiked = false;
   Memo? _currentMemo;
@@ -60,6 +61,7 @@ class _MainScreenState extends State<MainScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadUserProfile());
   }
 
+  // 테마·색상을 적용하기 위해 프로필을 먼저 로드하고, 이후 문장과 좋아요 상태를 불러오는 순서로 진행
   Future<void> _loadUserProfile() async {
     final uid = _uid;
     if (uid == null) return;
@@ -74,8 +76,12 @@ class _MainScreenState extends State<MainScreen> {
     );
 
     final local = LocalDataService();
-    if (local.localAttendanceDates.isEmpty && profile.attendanceDates.isNotEmpty) {
-      await local.restoreAttendance(profile.attendanceDates, profile.consecutiveDays);
+    if (local.localAttendanceDates.isEmpty &&
+        profile.attendanceDates.isNotEmpty) {
+      await local.restoreAttendance(
+        profile.attendanceDates,
+        profile.consecutiveDays,
+      );
       debugPrint(
         '[ATTEND] Firestore에서 출석 데이터 복원 — ${profile.attendanceDates.length}개, consecutiveDays=${profile.consecutiveDays}',
       );
@@ -88,7 +94,10 @@ class _MainScreenState extends State<MainScreen> {
         ? await _recommendationService.getTodayQuote(uid)
         : await _quoteService.getRandomQuote();
     if (!mounted) return;
-    setState(() => _quote = quote);
+    setState(() {
+      _quote = quote;
+      _isLoading = false;
+    });
     if (quote != null) {
       _loadLikeStatus(quote.id);
       _loadCurrentMemo(quote.id);
@@ -372,7 +381,8 @@ class _MainScreenState extends State<MainScreen> {
           quoteId: quoteId,
           userId: uid,
           content: content,
-          date: '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+          date:
+              '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
           createdAt: Timestamp.now(),
         );
       }
@@ -478,11 +488,21 @@ class _MainScreenState extends State<MainScreen> {
             const SizedBox(height: 24),
 
             // 메인 문장
-            Text(
-              _quote?.sentence ?? '등록된 문장이 없습니다.',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.sentenceBody(color: colors.textPrimary),
-            ),
+            if (_isLoading)
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.textSecondary,
+                ),
+              )
+            else
+              Text(
+                _quote?.sentence ?? '등록된 문장이 없습니다.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.sentenceBody(color: colors.textPrimary),
+              ),
 
             // 저자
             _Fade(

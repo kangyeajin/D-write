@@ -16,10 +16,10 @@ class QuoteRecommendationService {
     UserRepository? userRepo,
     LocalDataService? local,
     WeatherService? weather,
-  })  : _quoteRepo = quoteRepo ?? QuoteRepository(),
-        _userRepo = userRepo ?? UserRepository(),
-        _local = local ?? LocalDataService(),
-        _weather = weather ?? WeatherService();
+  }) : _quoteRepo = quoteRepo ?? QuoteRepository(),
+       _userRepo = userRepo ?? UserRepository(),
+       _local = local ?? LocalDataService(),
+       _weather = weather ?? WeatherService();
 
   /// 오늘의 문장을 반환.
   /// - 오늘 이미 선정된 경우 캐시에서 즉시 반환
@@ -42,11 +42,15 @@ class QuoteRecommendationService {
     // 2. 월별 캐시 최신화
     final currentMonth = DateTime.now().month;
     if (_local.cachedMonth != currentMonth) {
-      debugPrint('[QUOTE] 월 캐시 없음(cached=${_local.cachedMonth}) → Firestore 문장 조회 (month=$currentMonth)');
+      debugPrint(
+        '[QUOTE] 월 캐시 없음(cached=${_local.cachedMonth}) → Firestore 문장 조회 (month=$currentMonth)',
+      );
       await _refreshMonthCache(currentMonth);
       debugPrint('[QUOTE] 캐시 저장 완료: ${_local.getCachedQuotes().length}개');
     } else {
-      debugPrint('[QUOTE] 월 캐시 유효 (month=$currentMonth, ${_local.getCachedQuotes().length}개)');
+      debugPrint(
+        '[QUOTE] 월 캐시 유효 (month=$currentMonth, ${_local.getCachedQuotes().length}개)',
+      );
     }
 
     // 3. 날씨 조회 (실패 시 'All')
@@ -61,7 +65,9 @@ class QuoteRecommendationService {
       seenIds = daily.seenIds;
       await _local.setSeenQuoteIds(seenIds);
       debugPrint('[QUOTE] seenIds 로드 완료 (${seenIds.length}개)');
-      debugPrint('[QUOTE] Firestore dailyData — fsDate=${daily.todayDate}, fsQuoteId=${daily.todayQuoteId}');
+      debugPrint(
+        '[QUOTE] Firestore dailyData — fsDate=${daily.todayDate}, fsQuoteId=${daily.todayQuoteId}',
+      );
 
       // 다른 기기에서 오늘 이미 문장이 배정된 경우 → 동일 문장 반환 (기기 간 일관성)
       final fsQuoteId = daily.todayQuoteId ?? '';
@@ -75,13 +81,15 @@ class QuoteRecommendationService {
         }
         debugPrint('[QUOTE] Firestore 문장 조회 실패 → 신규 선정 진행');
       } else {
-        debugPrint('[QUOTE] Firestore 오늘 문장 없음 (fsDate=${daily.todayDate} ≠ today=$todayStr) → 신규 선정');
+        debugPrint(
+          '[QUOTE] Firestore 오늘 문장 없음 (fsDate=${daily.todayDate} ≠ today=$todayStr) → 신규 선정',
+        );
       }
     } else {
       debugPrint('[QUOTE] seenIds 로컬 캐시 사용 (${seenIds.length}개)');
     }
 
-    // 5. 3단계 fallback 추천
+    // 5. 문장 조회
     final selected = _selectQuote(weather, seenIds, currentMonth);
     if (selected == null) {
       debugPrint('[QUOTE] 문장 선택 실패 (캐시 비어있음)');
@@ -106,16 +114,20 @@ class QuoteRecommendationService {
     final needsSlice = updatedIds.length > 1500;
     final sliced = needsSlice ? updatedIds.sublist(500) : null;
 
-    debugPrint('[ATTEND] Firestore 동기화 시작 (fire-and-forget) — todayDate=$todayStr, quoteId=${selected.id}');
-    _userRepo.recordDailyActivity(
-      uid: uid,
-      newQuoteId: selected.id,
-      todayStr: todayStr,
-      consecutiveDays: newConsecutive,
-      slicedSeenIds: sliced,
-    ).catchError((Object e) {
-      debugPrint('[ATTEND] Firestore 동기화 실패: $e');
-    });
+    debugPrint(
+      '[ATTEND] Firestore 동기화 시작 (fire-and-forget) — todayDate=$todayStr, quoteId=${selected.id}',
+    );
+    _userRepo
+        .recordDailyActivity(
+          uid: uid,
+          newQuoteId: selected.id,
+          todayStr: todayStr,
+          consecutiveDays: newConsecutive,
+          slicedSeenIds: sliced,
+        )
+        .catchError((Object e) {
+          debugPrint('[ATTEND] Firestore 동기화 실패: $e');
+        });
 
     return selected;
   }
@@ -129,12 +141,16 @@ class QuoteRecommendationService {
     debugPrint('[QUOTE] 전체=${all.length}개, 미열람=${unseen.length}개');
 
     // 1순위: 이번 달 + 안 본 + 날씨 매칭
-    final stage1 = unseen
-        .where((q) =>
-            q.month == currentMonth &&
-            (q.weatherTags.contains(weather) || q.weatherTags.contains('All')))
-        .toList()
-      ..shuffle();
+    final stage1 =
+        unseen
+            .where(
+              (q) =>
+                  q.month == currentMonth &&
+                  (q.weatherTags.contains(weather) ||
+                      q.weatherTags.contains('All')),
+            )
+            .toList()
+          ..shuffle();
     if (stage1.isNotEmpty) {
       debugPrint('[QUOTE] 선택=${stage1.first.id} (1순위: 이번달+미열람+날씨)');
       return stage1.first;
