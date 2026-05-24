@@ -174,7 +174,7 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('알림 설정', style: AppTextStyles.sectionTitle),
+              Text('알림 설정', style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -199,7 +199,7 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
               ),
               if (_notifPopup) ...[
                 const SizedBox(height: 20),
-                const Text('알림 시간', style: AppTextStyles.sectionTitle),
+                Text('알림 시간', style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary)),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: _pickTime,
@@ -221,17 +221,17 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
                           _notifTime != null
                               ? _notifTime!.format(context)
                               : '시간 선택',
-                          style: AppTextStyles.button,
+                          style: AppTextStyles.button.copyWith(color: colors.textPrimary),
                         ),
                         const SizedBox(width: 6),
-                        const Icon(Icons.chevron_right, size: 16),
+                        Icon(Icons.chevron_right, size: 16, color: colors.textPrimary),
                       ],
                     ),
                   ),
                 ),
               ],
               const SizedBox(height: 40),
-              const Text('앱 테마', style: AppTextStyles.sectionTitle),
+              Text('앱 테마', style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -249,7 +249,7 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              const Text('컬러 테마', style: AppTextStyles.sectionTitle),
+              Text('컬러 테마', style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary)),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -263,11 +263,11 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 40),
-              const Text('도움말 및 문의사항', style: AppTextStyles.sectionTitle),
+              Text('도움말 및 문의사항', style: AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary)),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _launchEmail,
-                child: const Text(_contactEmail, style: AppTextStyles.body),
+                child: Text(_contactEmail, style: AppTextStyles.body.copyWith(color: colors.textPrimary)),
               ),
               const SizedBox(height: 32),
             ],
