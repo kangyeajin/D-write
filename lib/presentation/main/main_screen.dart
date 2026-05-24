@@ -417,7 +417,16 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _activate() {
-    if (!_active) setState(() => _active = true);
+    if (!_active) {
+      setState(() => _active = true);
+      _recordAttendance();
+    }
+  }
+
+  void _recordAttendance() {
+    final uid = _uid;
+    if (uid == null || _quote == null) return;
+    _recommendationService.markAttendance(uid);
   }
 
   void _deactivate() {

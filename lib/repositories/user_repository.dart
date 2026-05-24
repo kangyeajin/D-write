@@ -57,15 +57,14 @@ class UserRepository {
     return query.docs.isEmpty;
   }
 
-  /// 하루 1회 단일 Firestore 업데이트:
-  /// 새 문장 기록 + 출석 + 연속 출석 수
+  /// 하루 1회 단일 Firestore 업데이트: 새 문장 기록 + seenIds
+  /// 출석(attendanceDates, consecutiveDays)은 updateAttendance에서 별도 처리
   ///
   /// [slicedSeenIds]: 1500개 초과로 슬라이싱된 전체 배열 (null이면 arrayUnion만 사용)
   Future<void> recordDailyActivity({
     required String uid,
     required String newQuoteId,
     required String todayStr,
-    required int consecutiveDays,
     List<String>? slicedSeenIds,
   }) async {
     final ref = _db.collection('users').doc(uid);
@@ -76,8 +75,6 @@ class UserRepository {
         tx.update(ref, {
           'seenQuoteIds': slicedSeenIds,
           'seen_quotes_count': FieldValue.increment(1),
-          'attendanceDates': FieldValue.arrayUnion([todayStr]),
-          'consecutiveDays': consecutiveDays,
           'todayDate': todayStr,
           'todayQuoteId': newQuoteId,
         });
@@ -86,12 +83,22 @@ class UserRepository {
       await ref.update({
         'seenQuoteIds': FieldValue.arrayUnion([newQuoteId]),
         'seen_quotes_count': FieldValue.increment(1),
-        'attendanceDates': FieldValue.arrayUnion([todayStr]),
-        'consecutiveDays': consecutiveDays,
         'todayDate': todayStr,
         'todayQuoteId': newQuoteId,
       });
     }
+  }
+
+  /// 사용자가 실제로 문장을 확인했을 때 호출 — 출석 날짜 + 연속 출석 수 기록
+  Future<void> updateAttendance(
+    String uid,
+    String todayStr,
+    int consecutiveDays,
+  ) async {
+    await _db.collection('users').doc(uid).update({
+      'attendanceDates': FieldValue.arrayUnion([todayStr]),
+      'consecutiveDays': consecutiveDays,
+    });
   }
 
   /// seenQuoteIds + 오늘 배정된 문장 정보를 단일 읽기로 반환.

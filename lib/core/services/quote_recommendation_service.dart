@@ -96,40 +96,51 @@ class QuoteRecommendationService {
       return null;
     }
 
-    // 6. 출석 처리 (로컬)
+    // 6. 문장 로컬 캐시 저장
+    await _local.setTodayQuote(selected.id, todayStr);
+    await _local.addSeenQuoteId(selected.id);
+
+    // 7. Firestore 단일 배치 업데이트 (비동기, 실패해도 UX 차단 안 함)
+    // 출석(attendanceDates)은 markAttendance()에서 사용자가 화면을 확인할 때 별도 기록
+    final updatedIds = _local.seenQuoteIds;
+    final needsSlice = updatedIds.length > 1500;
+    final sliced = needsSlice ? updatedIds.sublist(500) : null;
+
+    debugPrint('[QUOTE] Firestore seenIds 동기화 (fire-and-forget) — quoteId=${selected.id}');
+    _userRepo
+        .recordDailyActivity(
+          uid: uid,
+          newQuoteId: selected.id,
+          todayStr: todayStr,
+          slicedSeenIds: sliced,
+        )
+        .catchError((Object e) {
+          debugPrint('[QUOTE] Firestore 동기화 실패: $e');
+        });
+
+    return selected;
+  }
+
+  /// 사용자가 실제로 문장을 확인했을 때 호출.
+  /// 오늘 이미 기록된 경우 스킵 (중복 호출 안전).
+  Future<void> markAttendance(String uid) async {
+    final todayStr = _todayStr();
+    if (_local.localAttendanceDates.contains(todayStr)) return;
+
     final yesterday = _yesterdayStr();
     final localDates = _local.localAttendanceDates;
     final newConsecutive = localDates.contains(yesterday)
         ? _local.consecutiveDays + 1
         : 1;
 
-    debugPrint('[ATTEND] consecutiveDays=$newConsecutive, date=$todayStr');
-
-    await _local.setTodayQuote(selected.id, todayStr);
+    debugPrint('[ATTEND] 출석 기록 — date=$todayStr, consecutiveDays=$newConsecutive');
     await _local.setAttendance(todayStr, newConsecutive);
-    await _local.addSeenQuoteId(selected.id);
 
-    // 7. Firestore 단일 배치 업데이트 (비동기, 실패해도 UX 차단 안 함)
-    final updatedIds = _local.seenQuoteIds;
-    final needsSlice = updatedIds.length > 1500;
-    final sliced = needsSlice ? updatedIds.sublist(500) : null;
-
-    debugPrint(
-      '[ATTEND] Firestore 동기화 시작 (fire-and-forget) — todayDate=$todayStr, quoteId=${selected.id}',
-    );
     _userRepo
-        .recordDailyActivity(
-          uid: uid,
-          newQuoteId: selected.id,
-          todayStr: todayStr,
-          consecutiveDays: newConsecutive,
-          slicedSeenIds: sliced,
-        )
+        .updateAttendance(uid, todayStr, newConsecutive)
         .catchError((Object e) {
-          debugPrint('[ATTEND] Firestore 동기화 실패: $e');
+          debugPrint('[ATTEND] Firestore 출석 동기화 실패: $e');
         });
-
-    return selected;
   }
 
   /// 3단계 fallback 추천
