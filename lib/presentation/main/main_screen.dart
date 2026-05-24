@@ -3,6 +3,7 @@ import 'package:d_write/core/models/memo_model.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/models/user_model.dart';
 import 'package:d_write/core/services/like_service.dart';
+import 'package:d_write/core/services/notification_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/services/local_data_service.dart';
 import 'package:d_write/core/services/quote_recommendation_service.dart';
@@ -44,6 +45,7 @@ class _MainScreenState extends State<MainScreen> {
   final LikeService _likeService = LikeService();
   final MemoService _memoService = MemoService();
   final UserService _userService = UserService();
+  final NotificationService _notificationService = NotificationService();
 
   Quote? _quote;
   bool _isLoading = true;
@@ -86,6 +88,96 @@ class _MainScreenState extends State<MainScreen> {
         '[ATTEND] Firestore에서 출석 데이터 복원 — ${profile.attendanceDates.length}개, consecutiveDays=${profile.consecutiveDays}',
       );
     }
+
+    // 재설치 후 첫 실행 — 알림 설정이 켜져 있었던 경우 권한 재요청
+    if (profile.notifPopup && !local.notifPermissionChecked) {
+      await local.setNotifPermissionChecked();
+      if (mounted) await _handleNotifPermissionOnReinstall(profile);
+    }
+  }
+
+  Future<void> _handleNotifPermissionOnReinstall(UserProfile profile) async {
+    final alreadyGranted = await _notificationService.areNotificationsEnabled();
+    if (alreadyGranted) {
+      final time = _parseNotifTime(profile.notifTime);
+      if (time != null) {
+        await _notificationService.scheduleDailyNotification(
+          time: time,
+          withSound: profile.notifSound,
+          withVibration: profile.notifVibration,
+        );
+        debugPrint('[ATTEND] 재설치 감지 — 알림 권한 이미 허용, 재스케줄링 완료');
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('알림 권한이 필요합니다'),
+        content: const Text(
+          '이전에 알림을 설정하셨습니다.\n앱 재설치 후 권한이 초기화되어 다시 허용이 필요합니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('허용'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true) {
+      await _disableNotifPopup();
+      return;
+    }
+
+    final granted = await _notificationService.requestPermission();
+    if (!granted) {
+      debugPrint('[ATTEND] 알림 권한 거부 → notifPopup 비활성화');
+      await _disableNotifPopup();
+      return;
+    }
+
+    final time = _parseNotifTime(profile.notifTime);
+    if (time != null) {
+      await _notificationService.scheduleDailyNotification(
+        time: time,
+        withSound: profile.notifSound,
+        withVibration: profile.notifVibration,
+      );
+      debugPrint('[ATTEND] 재설치 감지 — 알림 권한 허용, 재스케줄링 완료');
+    }
+  }
+
+  Future<void> _disableNotifPopup() async {
+    final uid = _uid;
+    if (uid == null) return;
+    await _userService.updateSettings(uid, {'notifPopup': false});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('알림이 꺼졌습니다. 앱 설정에서 다시 활성화할 수 있습니다.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  TimeOfDay? _parseNotifTime(String? timeStr) {
+    if (timeStr == null) return null;
+    final parts = timeStr.split(':');
+    if (parts.length != 2) return null;
+    return TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 8,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
   }
 
   Future<void> _loadQuote() async {

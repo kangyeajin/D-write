@@ -16,6 +16,8 @@ const _kConsecutiveDays = 'consecutiveDays';
 const _kSeenQuoteIds = 'seenQuoteIds';
 const _kTodayIsLiked = 'todayIsLiked';
 const _kTodayMemo = 'todayMemo';
+// 이 설치에서 알림 권한을 이미 확인했는지 여부 (재설치 감지용)
+const _kNotifPermissionChecked = 'notif_permission_checked';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._();
@@ -101,6 +103,12 @@ class LocalDataService {
       createdAt: Timestamp.fromMillisecondsSinceEpoch(m['createdAt'] as int),
     );
   }
+
+  bool get notifPermissionChecked =>
+      (_userBox.get(_kNotifPermissionChecked) as bool?) ?? false;
+
+  Future<void> setNotifPermissionChecked() =>
+      _userBox.put(_kNotifPermissionChecked, true);
 
   Future<void> setTodayLike(bool isLiked) =>
       _userBox.put(_kTodayIsLiked, isLiked);

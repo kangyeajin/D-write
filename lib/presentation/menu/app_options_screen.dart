@@ -92,7 +92,20 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
   void _togglePopup() async {
     final next = !_notifPopup;
     if (next) {
-      await _notificationService.requestPermission();
+      final granted = await _notificationService.requestPermission();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '알림 권한이 거부되었습니다. 시스템 설정에서 알림을 허용한 후 다시 시도해 주세요.',
+              ),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
     }
     setState(() => _notifPopup = next);
     await _updateField('notifPopup', next);
