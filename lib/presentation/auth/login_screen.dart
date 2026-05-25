@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _googleLoading = false;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -97,11 +98,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: const InputDecoration(labelText: '이메일'),
                   keyboardType: TextInputType.emailAddress,
                 ),
+                const SizedBox(height: 16),
                 TextField(
                   key: const Key('password_field'),
                   controller: _passwordController,
-                  decoration: const InputDecoration(labelText: '비밀번호'),
-                  obscureText: true,
+                  obscureText: !_showPassword,
+                  decoration: InputDecoration(
+                    labelText: '비밀번호',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _showPassword ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () =>
+                          setState(() => _showPassword = !_showPassword),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
