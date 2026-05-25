@@ -1,5 +1,6 @@
 import 'package:d_write/core/services/user_service.dart';
 import 'package:d_write/core/utils/snack_bar_utils.dart';
+import 'package:d_write/presentation/auth/google_signup_profile_screen.dart';
 import 'package:d_write/presentation/auth/signup_step2_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -17,6 +18,7 @@ class SignupStep1Screen extends StatefulWidget {
 class _SignupStep1ScreenState extends State<SignupStep1Screen> {
   final _emailController = TextEditingController();
   _EmailStatus _status = _EmailStatus.unchecked;
+  bool _googleLoading = false;
 
   @override
   void dispose() {
@@ -36,6 +38,28 @@ class _SignupStep1ScreenState extends State<SignupStep1Screen> {
     final available = await widget.userService.isEmailAvailable(email);
     if (!mounted) return;
     setState(() => _status = available ? _EmailStatus.available : _EmailStatus.taken);
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _googleLoading = true);
+    final result = await widget.userService.signInWithGoogle();
+    if (!mounted) return;
+    setState(() => _googleLoading = false);
+
+    if (result.user == null) return;
+
+    if (result.isNewUser) {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => GoogleSignupProfileScreen(
+            userService: widget.userService,
+            user: result.user!,
+          ),
+        ),
+      );
+    }
+    // 기존 회원: AuthGate가 authStateChanges 스트림을 감지하여 자동 전환
   }
 
   void _next() {
@@ -109,9 +133,15 @@ class _SignupStep1ScreenState extends State<SignupStep1Screen> {
             const Divider(),
             const SizedBox(height: 16),
             OutlinedButton.icon(
-              icon: const Icon(Icons.g_mobiledata),
+              icon: _googleLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.g_mobiledata),
               label: const Text('구글로 이용하기'),
-              onPressed: null, // Phase 11
+              onPressed: _googleLoading ? null : _signInWithGoogle,
             ),
             const SizedBox(height: 8),
             const OutlinedButton(

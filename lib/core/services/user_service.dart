@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:d_write/core/models/user_model.dart';
 import 'package:d_write/repositories/user_repository.dart';
 
@@ -23,6 +24,18 @@ abstract class IUserService {
   Future<bool> isEmailAvailable(String email);
   Future<bool> isNicknameAvailable(String nickname);
   Future<void> updateSettings(String uid, Map<String, dynamic> fields);
+  Future<({User? user, bool isNewUser})> signInWithGoogle();
+  Future<bool> completeGoogleProfile({
+    required String uid,
+    required String email,
+    required String nickname,
+    required String gender,
+    int? birthYear,
+    int? birthMonth,
+    int? birthDay,
+    required bool locationConsent,
+    required bool privacyConsent,
+  });
 }
 
 class UserService implements IUserService {
@@ -150,6 +163,63 @@ class UserService implements IUserService {
       await _userRepository.updateProfileFields(uid, fields);
     } catch (e) {
       debugPrint('UserService.updateSettings error: $e');
+    }
+  }
+
+  @override
+  Future<({User? user, bool isNewUser})> signInWithGoogle() async {
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return (user: null, isNewUser: false);
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final result = await _auth.signInWithCredential(credential);
+      final user = result.user;
+      if (user == null) return (user: null, isNewUser: false);
+
+      final profile = await _userRepository.getUser(user.uid);
+      debugPrint('[AUTH] Google 로그인 — uid=${user.uid}, isNewUser=${profile == null}');
+      return (user: user, isNewUser: profile == null);
+    } catch (e) {
+      debugPrint('[ERROR] UserService.signInWithGoogle: $e');
+      return (user: null, isNewUser: false);
+    }
+  }
+
+  @override
+  Future<bool> completeGoogleProfile({
+    required String uid,
+    required String email,
+    required String nickname,
+    required String gender,
+    int? birthYear,
+    int? birthMonth,
+    int? birthDay,
+    required bool locationConsent,
+    required bool privacyConsent,
+  }) async {
+    try {
+      final profile = UserProfile(
+        uid: uid,
+        email: email,
+        nickname: nickname,
+        gender: gender,
+        birthYear: birthYear,
+        birthMonth: birthMonth,
+        birthDay: birthDay,
+        locationConsent: locationConsent,
+        privacyConsent: privacyConsent,
+      );
+      await _userRepository.createUser(profile);
+      debugPrint('[AUTH] Google 프로필 저장 완료 — uid=$uid');
+      return true;
+    } catch (e) {
+      debugPrint('[ERROR] UserService.completeGoogleProfile: $e');
+      return false;
     }
   }
 }
