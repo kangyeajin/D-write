@@ -1,5 +1,6 @@
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/services/quote_service.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:d_write/core/theme/app_colors.dart';
 import 'package:d_write/presentation/admin/bulk_upload_screen.dart';
 import 'package:d_write/repositories/quote_repository.dart';
@@ -66,9 +67,7 @@ class _AdminQuotesScreenState extends State<AdminQuotesScreen> {
       await _loadQuotes();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('삭제에 실패했습니다.')),
-        );
+        showAppSnackBar(context, '삭제에 실패했습니다.');
       }
     }
   }

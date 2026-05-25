@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/theme/app_palette.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show DeviceOrientation, SystemChrome;
@@ -426,17 +427,12 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
     } catch (e) {
       debugPrint('[ERROR] 공유 실패 — $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('공유에 실패했습니다.')));
+        showAppSnackBar(context, '공유에 실패했습니다.');
       }
     }
   }
 
   Future<void> _saveImage() async {
-    final snackBgColor = AppColorTokens.of(
-      context,
-    ).textPrimary.withValues(alpha: 0.85);
     setState(() => _isSaving = true);
     try {
       final boundary =
@@ -457,33 +453,15 @@ class _CapturePreviewScreenState extends State<_CapturePreviewScreen> {
       );
       debugPrint('[CAM] 갤러리 저장 완료 — result=$result');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result == true ? '사진이 갤러리에 저장되었습니다.' : '저장에 실패했습니다.',
-            textAlign: TextAlign.center,
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(bottom: 220, left: 24, right: 24),
-          elevation: 0,
-          backgroundColor: snackBgColor,
-        ),
+      showAppSnackBar(
+        context,
+        result == true ? '사진이 갤러리에 저장되었습니다.' : '저장에 실패했습니다.',
       );
       if (result == true) Navigator.pop(context);
     } catch (e) {
       debugPrint('[ERROR] 갤러리 저장 실패 — $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('저장에 실패했습니다.', textAlign: TextAlign.center),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.only(bottom: 220, left: 24, right: 24),
-            elevation: 0,
-            backgroundColor: snackBgColor,
-          ),
-        );
+        showAppSnackBar(context, '저장에 실패했습니다.');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

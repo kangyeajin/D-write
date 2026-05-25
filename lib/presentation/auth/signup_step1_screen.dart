@@ -1,4 +1,5 @@
 import 'package:d_write/core/services/user_service.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:d_write/presentation/auth/signup_step2_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -28,9 +29,7 @@ class _SignupStep1ScreenState extends State<SignupStep1Screen> {
   Future<void> _checkEmail() async {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('올바른 이메일 형식을 입력하세요.')),
-      );
+      showAppSnackBar(context, '올바른 이메일 형식을 입력하세요.');
       return;
     }
     setState(() => _status = _EmailStatus.checking);

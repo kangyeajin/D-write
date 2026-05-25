@@ -10,6 +10,7 @@ import 'package:d_write/core/services/quote_recommendation_service.dart';
 import 'package:d_write/core/services/quote_service.dart';
 import 'package:d_write/core/services/user_service.dart';
 import 'package:d_write/core/theme/app_palette.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/core/theme/theme_notifier.dart';
 import 'package:d_write/presentation/admin/add_sentence_screen.dart';
@@ -161,11 +162,10 @@ class _MainScreenState extends State<MainScreen> {
     if (uid == null) return;
     await _userService.updateSettings(uid, {'notifPopup': false});
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('알림이 꺼졌습니다. 앱 설정에서 다시 활성화할 수 있습니다.'),
-          duration: Duration(seconds: 4),
-        ),
+      showAppSnackBar(
+        context,
+        '알림이 꺼졌습니다. 앱 설정에서 다시 활성화할 수 있습니다.',
+        duration: const Duration(seconds: 4),
       );
     }
   }

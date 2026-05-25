@@ -1,4 +1,5 @@
 import 'package:d_write/core/services/user_service.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:d_write/presentation/auth/signup_step1_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -35,9 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그인에 실패했습니다.')),
-      );
+      showAppSnackBar(context, '로그인에 실패했습니다.');
     }
     // 로그인 성공 시 AuthGate가 authStateChanges 스트림을 감지하여 MainScreen으로 전환
   }

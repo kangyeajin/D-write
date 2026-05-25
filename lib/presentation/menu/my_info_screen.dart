@@ -3,6 +3,7 @@ import 'package:d_write/core/services/like_service.dart';
 import 'package:d_write/core/services/local_data_service.dart';
 import 'package:d_write/core/services/memo_service.dart';
 import 'package:d_write/core/theme/app_palette.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/repositories/user_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -88,9 +89,7 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
 
     final nickname = _nicknameCtrl.text.trim();
     if (nickname.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('닉네임을 입력해주세요.')),
-      );
+      showAppSnackBar(context, '닉네임을 입력해주세요.');
       return;
     }
 
@@ -118,9 +117,7 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
     } catch (_) {
       setState(() => _isSaving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('저장에 실패했습니다.')),
-        );
+        showAppSnackBar(context, '저장에 실패했습니다.');
       }
     }
   }
@@ -206,10 +203,7 @@ class _MyInfoScreenState extends State<MyInfoScreen> {
                         ?.updatePassword(pw);
                     if (ctx.mounted) Navigator.pop(ctx);
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('비밀번호가 변경되었습니다.')),
-                      );
+                      showAppSnackBar(context, '비밀번호가 변경되었습니다.');
                     }
                   } on FirebaseAuthException catch (e) {
                     setDialogState(() => errorText = _pwError(e.code));

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:d_write/core/models/quote_model.dart';
 import 'package:d_write/core/theme/app_palette.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:gallery_saver_plus/gallery_saver.dart';
@@ -157,14 +158,13 @@ class _SaveEditScreenState extends State<SaveEditScreen> {
       final result =
           await GallerySaver.saveImage(file.path, albumName: 'D-Write');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result == true ? '이미지가 갤러리에 저장되었습니다.' : '저장에 실패했습니다.'),
-      ));
+      showAppSnackBar(
+        context,
+        result == true ? '이미지가 갤러리에 저장되었습니다.' : '저장에 실패했습니다.',
+      );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('저장에 실패했습니다.')),
-        );
+        showAppSnackBar(context, '저장에 실패했습니다.');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -186,9 +186,7 @@ class _SaveEditScreenState extends State<SaveEditScreen> {
       await Share.shareXFiles([XFile(file.path)]);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('공유에 실패했습니다.')),
-        );
+        showAppSnackBar(context, '공유에 실패했습니다.');
       }
     }
   }

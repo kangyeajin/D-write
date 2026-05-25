@@ -1,4 +1,5 @@
 import 'package:d_write/core/services/quote_service.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:d_write/core/theme/app_colors.dart';
 import 'package:d_write/repositories/quote_repository.dart';
 import 'package:flutter/material.dart';
@@ -64,16 +65,12 @@ class _AddSentenceScreenState extends State<AddSentenceScreen> {
         weatherTags: _selectedWeatherTags.toList(),
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('문장이 등록되었습니다.')),
-        );
+        showAppSnackBar(context, '문장이 등록되었습니다.');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('등록에 실패했습니다.')),
-        );
+        showAppSnackBar(context, '등록에 실패했습니다.');
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

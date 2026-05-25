@@ -1,4 +1,5 @@
 import 'package:d_write/core/services/user_service.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:flutter/material.dart';
 
 enum _NicknameStatus { unchecked, checking, available, taken }
@@ -49,13 +50,11 @@ class _SignupStep3ScreenState extends State<SignupStep3Screen> {
   Future<void> _checkNickname() async {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('닉네임을 입력하세요.')));
+      showAppSnackBar(context, '닉네임을 입력하세요.');
       return;
     }
     if (nickname.length > 7) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('닉네임은 7글자 이하로 입력하세요.')));
+      showAppSnackBar(context, '닉네임은 7글자 이하로 입력하세요.');
       return;
     }
     setState(() => _nicknameStatus = _NicknameStatus.checking);
@@ -115,9 +114,7 @@ class _SignupStep3ScreenState extends State<SignupStep3Screen> {
       // 스택에 쌓인 Signup 화면들만 모두 pop한다.
       Navigator.popUntil(context, (route) => route.isFirst);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('회원가입에 실패했습니다. 잠시 후 다시 시도해주세요.')),
-      );
+      showAppSnackBar(context, '회원가입에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   }
 

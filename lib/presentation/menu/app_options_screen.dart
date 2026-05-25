@@ -1,6 +1,7 @@
 import 'package:d_write/core/services/notification_service.dart';
 import 'package:d_write/core/services/user_service.dart';
 import 'package:d_write/core/theme/app_palette.dart';
+import 'package:d_write/core/utils/snack_bar_utils.dart';
 import 'package:d_write/core/theme/app_text_styles.dart';
 import 'package:d_write/core/theme/theme_notifier.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -95,13 +96,10 @@ class _AppOptionsScreenState extends State<AppOptionsScreen> {
       final granted = await _notificationService.requestPermission();
       if (!granted) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                '알림 권한이 거부되었습니다. 시스템 설정에서 알림을 허용한 후 다시 시도해 주세요.',
-              ),
-              duration: Duration(seconds: 4),
-            ),
+          showAppSnackBar(
+            context,
+            '알림 권한이 거부되었습니다. 시스템 설정에서 알림을 허용한 후 다시 시도해 주세요.',
+            duration: const Duration(seconds: 4),
           );
         }
         return;
