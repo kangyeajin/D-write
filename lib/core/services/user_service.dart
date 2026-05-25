@@ -24,7 +24,7 @@ abstract class IUserService {
   Future<bool> isEmailAvailable(String email);
   Future<bool> isNicknameAvailable(String nickname);
   Future<void> updateSettings(String uid, Map<String, dynamic> fields);
-  Future<({User? user, bool isNewUser})> signInWithGoogle();
+  Future<({User? user, bool isNewUser, String? error})> signInWithGoogle();
   Future<bool> completeGoogleProfile({
     required String uid,
     required String email,
@@ -167,10 +167,13 @@ class UserService implements IUserService {
   }
 
   @override
-  Future<({User? user, bool isNewUser})> signInWithGoogle() async {
+  Future<({User? user, bool isNewUser, String? error})> signInWithGoogle() async {
     try {
       final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return (user: null, isNewUser: false);
+      if (googleUser == null) {
+        // 사용자가 직접 취소
+        return (user: null, isNewUser: false, error: null);
+      }
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
@@ -179,14 +182,19 @@ class UserService implements IUserService {
       );
       final result = await _auth.signInWithCredential(credential);
       final user = result.user;
-      if (user == null) return (user: null, isNewUser: false);
+      if (user == null) {
+        return (user: null, isNewUser: false, error: 'Firebase 인증 실패');
+      }
 
       final profile = await _userRepository.getUser(user.uid);
       debugPrint('[AUTH] Google 로그인 — uid=${user.uid}, isNewUser=${profile == null}');
-      return (user: user, isNewUser: profile == null);
+      return (user: user, isNewUser: profile == null, error: null);
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[ERROR] UserService.signInWithGoogle FirebaseAuth [${e.code}]: ${e.message}');
+      return (user: null, isNewUser: false, error: e.code);
     } catch (e) {
       debugPrint('[ERROR] UserService.signInWithGoogle: $e');
-      return (user: null, isNewUser: false);
+      return (user: null, isNewUser: false, error: e.toString());
     }
   }
 

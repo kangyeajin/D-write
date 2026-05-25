@@ -32,7 +32,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _googleLoading = false);
 
-    if (result.user == null) return;
+    if (result.user == null) {
+      if (result.error != null) {
+        showAppSnackBar(context, '구글 로그인에 실패했습니다. (${result.error})');
+      }
+      return;
+    }
 
     if (result.isNewUser) {
       Navigator.push(
